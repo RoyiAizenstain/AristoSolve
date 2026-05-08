@@ -97,5 +97,82 @@
         }
       ]
     }
+    ,{
+      "name": "Problems",
+      "item": [
+        {
+          "name": "GET all problems",
+          "request": {
+            "method": "GET",
+            "url": "http://localhost:3000/problems",
+            "header": []
+          }
+        },
+        {
+          "name": "GET problems (filter by difficulty)",
+          "request": {
+            "method": "GET",
+            "url": "http://localhost:3000/problems?difficulty=easy",
+            "header": []
+          }
+        },
+        {
+          "name": "GET problems (filter by topic)",
+          "request": {
+            "method": "GET",
+            "url": "http://localhost:3000/problems?topic=strings",
+            "header": []
+          }
+        },
+        {
+          "name": "GET problem by ID",
+          "request": {
+            "method": "GET",
+            "url": "http://localhost:3000/problems/1",
+            "header": []
+          }
+        },
+        {
+          "name": "POST create problem",
+          "request": {
+            "method": "POST",
+            "url": "http://localhost:3000/problems",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "x-user-role", "value": "company" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Contains Duplicate\",\n  \"difficulty\": \"easy\",\n  \"topic\": \"arrays\",\n  \"type\": \"algorithm\",\n  \"description\": \"Given an integer array nums, return true if any value appears at least twice.\",\n  \"constraints\": \"1 <= nums.length <= 10^5\",\n  \"examples\": [{\"input\": \"nums = [1,2,3,1]\", \"output\": \"true\"}],\n  \"evalPrompt\": \"Reward hash set solution. Penalize sorting approach.\",\n  \"createdBy\": 2\n}"
+            }
+          }
+        },
+        {
+          "name": "PUT update problem",
+          "request": {
+            "method": "PUT",
+            "url": "http://localhost:3000/problems/1",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "x-user-role", "value": "admin" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"difficulty\": \"medium\"\n}"
+            }
+          }
+        },
+        {
+          "name": "DELETE problem",
+          "request": {
+            "method": "DELETE",
+            "url": "http://localhost:3000/problems/5",
+            "header": [
+              { "key": "x-user-role", "value": "admin" }
+            ]
+          }
+        }
+      ]
+    }
   ]
 }

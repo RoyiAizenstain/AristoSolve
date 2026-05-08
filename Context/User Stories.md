@@ -8,6 +8,7 @@
 ## 2. Recruitment Track (Company-Led Testing)
 * **As a candidate**, I want to see a list of active tests assigned to me by companies on my dashboard, including a clear deadline for each.
 * **As a candidate**, I want to tackle diverse problem types: algorithms, System Design, or debugging existing broken code.
+* **As a candidate**, I want to choose my preferred programming language (Python, Java, or JavaScript) so that I can solve problems in the language I'm most comfortable with.
 * **As a candidate**, I want to interact with the AI to solve the test, knowing that my thought process and the questions I ask are saved for evaluation.
 * **As a company representative**, I want to upload a test and define a unique "Evaluation Prompt" that instructs the AI on which professional aspects to prioritize when scoring (e.g., efficiency vs. readability).
 * **As a company representative**, I want to receive a weighted score and a detailed report that assesses the candidate on both the correctness of the final solution and the quality of their AI interaction.

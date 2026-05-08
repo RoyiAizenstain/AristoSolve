@@ -98,7 +98,7 @@ Auth is simulated via the `x-user-role` request header.
 
 ### conversations
 ```json
-{ "id": 1, "userId": 1, "problemId": 1, "startedAt": "", "endedAt": null }
+{ "id": 1, "userId": 1, "problemId": 1, "language": "python|java|javascript", "startedAt": "", "endedAt": null }
 ```
 `GET /conversations/:id` returns the conversation **with its messages** embedded.
 
@@ -127,6 +127,7 @@ POST and PUT must validate:
 - `difficulty`: `easy | medium | hard`
 - `status` (progress): `in_progress | completed`
 - `role` (message): `user | assistant`
+- `language` (conversation): `python | java | javascript`
 - Route `:id` params must be numeric
 
 ---
