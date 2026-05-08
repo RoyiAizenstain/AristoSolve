@@ -1,0 +1,101 @@
+{
+  "info": {
+    "name": "AristoSolve",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "GET all users",
+          "request": {
+            "method": "GET",
+            "url": "http://localhost:3000/users",
+            "header": [
+              { "key": "x-user-role", "value": "admin" }
+            ]
+          }
+        },
+        {
+          "name": "GET user by ID (admin)",
+          "request": {
+            "method": "GET",
+            "url": "http://localhost:3000/users/2",
+            "header": [
+              { "key": "x-user-role", "value": "admin" },
+              { "key": "x-user-id", "value": "1" }
+            ]
+          }
+        },
+        {
+          "name": "GET user by ID (own)",
+          "request": {
+            "method": "GET",
+            "url": "http://localhost:3000/users/3",
+            "header": [
+              { "key": "x-user-role", "value": "candidate" },
+              { "key": "x-user-id", "value": "3" }
+            ]
+          }
+        },
+        {
+          "name": "POST create user",
+          "request": {
+            "method": "POST",
+            "url": "http://localhost:3000/users",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Jane\",\n  \"lastName\": \"Doe\",\n  \"email\": \"jane@example.com\",\n  \"userRole\": \"candidate\",\n  \"level\": \"beginner\"\n}"
+            }
+          }
+        },
+        {
+          "name": "PUT update user (admin)",
+          "request": {
+            "method": "PUT",
+            "url": "http://localhost:3000/users/3",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "x-user-role", "value": "admin" },
+              { "key": "x-user-id", "value": "1" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"level\": \"intermediate\"\n}"
+            }
+          }
+        },
+        {
+          "name": "PUT update user (own)",
+          "request": {
+            "method": "PUT",
+            "url": "http://localhost:3000/users/3",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "x-user-role", "value": "candidate" },
+              { "key": "x-user-id", "value": "3" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"level\": \"advanced\"\n}"
+            }
+          }
+        },
+        {
+          "name": "DELETE user",
+          "request": {
+            "method": "DELETE",
+            "url": "http://localhost:3000/users/5",
+            "header": [
+              { "key": "x-user-role", "value": "admin" }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
