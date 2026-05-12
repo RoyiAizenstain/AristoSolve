@@ -87,13 +87,14 @@ Auth is simulated via the `x-user-role` request header.
 
 ### users
 ```json
-{ "userId": 1, "firstName": "", "lastName": "", "email": "", "userRole": "admin|company|candidate", "level": "beginner|intermediate|advanced", "createDate": "", "updateDate": "" }
+{ "userId": 1, "firstName": "", "lastName": "", "email": "", "password": "", "userRole": "admin|company|candidate", "level": "beginner|intermediate|advanced", "createDate": "", "updateDate": "" }
 ```
 
 ### problems
 ```json
-{ "id": 1, "title": "", "difficulty": "easy|medium|hard", "topic": "arrays|trees|graphs|dp|strings|...", "type": "algorithm|system-design|debugging", "description": "", "constraints": "", "examples": [], "evalPrompt": "", "createdBy": 1, "createdAt": "" }
+{ "id": 1, "title": "", "difficulty": "easy|medium|hard", "topic": "arrays|trees|graphs|dp|strings|...", "type": "algorithm|system-design|debugging", "description": "", "constraints": "", "examples": [], "evalPrompt": "", "isPublic": true, "createdBy": 1, "createdAt": "" }
 ```
+`isPublic: true` = open self-learning problem. `isPublic: false` = private company recruitment test.
 `GET /problems` supports query params: `?difficulty=easy&topic=arrays&type=algorithm`
 
 ### conversations
@@ -104,18 +105,21 @@ Auth is simulated via the `x-user-role` request header.
 
 ### messages
 ```json
-{ "id": 1, "conversationId": 1, "role": "user|assistant", "content": "", "createdAt": "" }
+{ "id": 1, "conversationId": 1, "sequenceNumber": 1, "role": "user|assistant", "content": "", "createdAt": "" }
 ```
+`sequenceNumber` is auto-assigned per conversation on create.
 
 ### evaluations
 ```json
-{ "id": 1, "userId": 1, "problemId": 1, "conversationId": 1, "score": 85, "feedback": "", "thinkingAnalysis": "", "createdAt": "" }
+{ "id": 1, "userId": 1, "problemId": 1, "conversationId": 1, "companyId": 2, "score": 85, "feedback": "", "thinkingAnalysis": "", "createdAt": "" }
 ```
+`companyId` is derived from `problem.createdBy` on create — not passed by the client.
 
 ### progress
 ```json
-{ "id": 1, "userId": 1, "problemId": 1, "status": "in_progress|completed", "attempts": 2, "lastAttemptAt": "" }
+{ "id": 1, "userId": 1, "problemId": 1, "status": "in_progress|completed", "attempts": 2, "lastAttemptAt": "", "deadline": null }
 ```
+`deadline` is optional. Set by company when assigning a test; `null` for self-learning.
 
 ---
 

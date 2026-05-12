@@ -10,12 +10,8 @@ const fail = (res, status, code, message) =>
 const getAll = (req, res) => {
   const role = req.headers['x-user-role'];
   const requesterId = parseInt(req.headers['x-user-id']);
-
-  if (role === 'company') {
-    const companyProblemIds = problems.findAll().filter(p => p.createdBy === requesterId).map(p => p.id);
-    return ok(res, evaluations.findAll().filter(e => companyProblemIds.includes(e.problemId)));
-  }
-
+  if (role === 'company')
+    return ok(res, evaluations.findAll().filter(e => e.companyId === requesterId));
   ok(res, evaluations.findAll());
 };
 
@@ -29,13 +25,10 @@ const getById = (req, res) => {
   const role = req.headers['x-user-role'];
   const requesterId = parseInt(req.headers['x-user-id']);
 
-  if (role === 'company') {
-    const problem = problems.findById(evaluation.problemId);
-    if (!problem || problem.createdBy !== requesterId)
-      return fail(res, 403, 'FORBIDDEN', 'Access denied');
-  } else if (role !== 'admin' && requesterId !== evaluation.userId) {
+  if (role === 'company' && evaluation.companyId !== requesterId)
     return fail(res, 403, 'FORBIDDEN', 'Access denied');
-  }
+  else if (role !== 'admin' && role !== 'company' && requesterId !== evaluation.userId)
+    return fail(res, 403, 'FORBIDDEN', 'Access denied');
 
   ok(res, evaluation);
 };
@@ -46,7 +39,10 @@ const create = (req, res) => {
     return fail(res, 400, 'VALIDATION_ERROR', 'userId, problemId, conversationId, score, feedback, and thinkingAnalysis are required');
   if (typeof score !== 'number' || score < 0 || score > 100)
     return fail(res, 400, 'VALIDATION_ERROR', 'score must be a number between 0 and 100');
-  ok(res, evaluations.create(req.body), 201);
+
+  const problem = problems.findById(problemId);
+  const companyId = problem ? problem.createdBy : null;
+  ok(res, evaluations.create({ ...req.body, companyId }), 201);
 };
 
 const update = (req, res) => {

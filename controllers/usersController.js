@@ -30,10 +30,10 @@ const getById = (req, res) => {
 };
 
 const create = (req, res) => {
-  const { firstName, lastName, email, userRole, level } = req.body;
+  const { firstName, lastName, email, password, userRole, level } = req.body;
 
-  if (!firstName || !lastName || !email || !userRole) {
-    return fail(res, 400, 'VALIDATION_ERROR', 'firstName, lastName, email, and userRole are required');
+  if (!firstName || !lastName || !email || !password || !userRole) {
+    return fail(res, 400, 'VALIDATION_ERROR', 'firstName, lastName, email, password, and userRole are required');
   }
   if (!VALID_ROLES.includes(userRole)) {
     return fail(res, 400, 'VALIDATION_ERROR', `userRole must be one of: ${VALID_ROLES.join(', ')}`);

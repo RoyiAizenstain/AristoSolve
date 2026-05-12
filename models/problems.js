@@ -12,6 +12,7 @@ let problems = [
       { input: 'nums = [3,2,4], target = 6', output: '[1,2]' }
     ],
     evalPrompt: 'Reward hash map O(n) approach. Penalize brute force O(n^2). Check that the candidate explains why a hash map works here.',
+    isPublic: false,
     createdBy: 2,
     createdAt: '2024-01-10T00:00:00Z'
   },
@@ -28,6 +29,7 @@ let problems = [
       { input: 'strs = [""]', output: '[[""]]' }
     ],
     evalPrompt: 'Reward sorted-key or character-count grouping. Check for edge cases like empty strings. Penalize nested loop solutions.',
+    isPublic: false,
     createdBy: 2,
     createdAt: '2024-01-11T00:00:00Z'
   },
@@ -45,6 +47,7 @@ let problems = [
       { input: 's = "(]"', output: 'false' }
     ],
     evalPrompt: 'Reward stack-based solution. Check that all three bracket types are handled correctly.',
+    isPublic: true,
     createdBy: 1,
     createdAt: '2024-01-12T00:00:00Z'
   },
@@ -61,6 +64,7 @@ let problems = [
       { input: 'nums = [-1,0,3,5,9,12], target = 2', output: '-1' }
     ],
     evalPrompt: 'Reward correct binary search. Check for off-by-one errors. Penalize linear search.',
+    isPublic: true,
     createdBy: 1,
     createdAt: '2024-01-13T00:00:00Z'
   },
@@ -77,6 +81,7 @@ let problems = [
       { input: 's = "bbbbb"', output: '1' }
     ],
     evalPrompt: 'Reward sliding window approach with a set or map. Penalize O(n^2) brute force.',
+    isPublic: false,
     createdBy: 2,
     createdAt: '2024-01-14T00:00:00Z'
   }

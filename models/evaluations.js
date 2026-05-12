@@ -1,8 +1,8 @@
 let evaluations = [
-  { id: 1, userId: 3, problemId: 1, conversationId: 1, score: 85, feedback: 'Good understanding of hash map optimization. Pivoted from brute force quickly.', thinkingAnalysis: 'Candidate started with O(n^2) but recognized the pattern after one hint. Strong reasoning.', createdAt: '2024-02-01T11:00:00Z' },
-  { id: 2, userId: 4, problemId: 1, conversationId: 3, score: 72, feedback: 'Reached correct solution but needed multiple prompts.', thinkingAnalysis: 'Candidate struggled to independently identify the hash map pattern. Required direct hints.', createdAt: '2024-02-03T10:00:00Z' },
-  { id: 3, userId: 5, problemId: 3, conversationId: 4, score: 91, feedback: 'Excellent stack-based approach with clear explanation.', thinkingAnalysis: 'Candidate independently recognized the stack pattern and explained edge cases unprompted.', createdAt: '2024-02-05T12:00:00Z' },
-  { id: 4, userId: 4, problemId: 3, conversationId: 5, score: 78, feedback: 'Solid solution on the third attempt.', thinkingAnalysis: 'Improved significantly across attempts. Shows good learning ability.', createdAt: '2024-02-06T16:00:00Z' },
+  { id: 1, userId: 3, problemId: 1, conversationId: 1, companyId: 2, score: 85, feedback: 'Good understanding of hash map optimization. Pivoted from brute force quickly.', thinkingAnalysis: 'Candidate started with O(n^2) but recognized the pattern after one hint. Strong reasoning.', createdAt: '2024-02-01T11:00:00Z' },
+  { id: 2, userId: 4, problemId: 1, conversationId: 3, companyId: 2, score: 72, feedback: 'Reached correct solution but needed multiple prompts.', thinkingAnalysis: 'Candidate struggled to independently identify the hash map pattern. Required direct hints.', createdAt: '2024-02-03T10:00:00Z' },
+  { id: 3, userId: 5, problemId: 3, conversationId: 4, companyId: 1, score: 91, feedback: 'Excellent stack-based approach with clear explanation.', thinkingAnalysis: 'Candidate independently recognized the stack pattern and explained edge cases unprompted.', createdAt: '2024-02-05T12:00:00Z' },
+  { id: 4, userId: 4, problemId: 3, conversationId: 5, companyId: 1, score: 78, feedback: 'Solid solution on the third attempt.', thinkingAnalysis: 'Improved significantly across attempts. Shows good learning ability.', createdAt: '2024-02-06T16:00:00Z' },
 ];
 let nextId = 5;
 
