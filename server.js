@@ -7,5 +7,8 @@ app.use(logger);
 
 app.use('/users', require('./routes/users'));
 app.use('/problems', require('./routes/problems'));
+app.use('/conversations', require('./routes/conversations'));
+app.use('/evaluations', require('./routes/evaluations'));
+app.use('/progress', require('./routes/progress'));
 
 app.listen(3000, () => console.log('Server running on http://localhost:3000'));
