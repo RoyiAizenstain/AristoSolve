@@ -28,8 +28,14 @@ const getById = (req, res) => {
 
   const role = req.headers['x-user-role'];
   const requesterId = parseInt(req.headers['x-user-id']);
-  if (role !== 'admin' && role !== 'company' && requesterId !== evaluation.userId)
+
+  if (role === 'company') {
+    const problem = problems.findById(evaluation.problemId);
+    if (!problem || problem.createdBy !== requesterId)
+      return fail(res, 403, 'FORBIDDEN', 'Access denied');
+  } else if (role !== 'admin' && requesterId !== evaluation.userId) {
     return fail(res, 403, 'FORBIDDEN', 'Access denied');
+  }
 
   ok(res, evaluation);
 };
