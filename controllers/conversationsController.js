@@ -34,6 +34,11 @@ const create = (req, res) => {
     return fail(res, 400, 'VALIDATION_ERROR', 'userId, problemId, and language are required');
   if (!VALID_LANGUAGES.includes(language))
     return fail(res, 400, 'VALIDATION_ERROR', `language must be one of: ${VALID_LANGUAGES.join(', ')}`);
+
+  const requesterId = parseInt(req.headers['x-user-id']);
+  if (userId !== requesterId)
+    return fail(res, 403, 'FORBIDDEN', 'Candidates can only create conversations for themselves');
+
   ok(res, conversations.create({ userId, problemId, language }), 201);
 };
 

@@ -33,6 +33,10 @@ const create = (req, res) => {
   const conversation = getConversationOr404(req, res);
   if (!conversation) return;
 
+  const requesterId = parseInt(req.headers['x-user-id']);
+  if (requesterId !== conversation.userId)
+    return fail(res, 403, 'FORBIDDEN', 'Access denied');
+
   const { role, content } = req.body;
   if (!role || !content)
     return fail(res, 400, 'VALIDATION_ERROR', 'role and content are required');

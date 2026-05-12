@@ -1,4 +1,5 @@
 const evaluations = require('../models/evaluations');
+const problems = require('../models/problems');
 
 const ok = (res, data, status = 200) =>
   res.status(status).json({ success: true, data, error: null });
@@ -7,6 +8,14 @@ const fail = (res, status, code, message) =>
   res.status(status).json({ success: false, data: null, error: { code, message, details: {} } });
 
 const getAll = (req, res) => {
+  const role = req.headers['x-user-role'];
+  const requesterId = parseInt(req.headers['x-user-id']);
+
+  if (role === 'company') {
+    const companyProblemIds = problems.findAll().filter(p => p.createdBy === requesterId).map(p => p.id);
+    return ok(res, evaluations.findAll().filter(e => companyProblemIds.includes(e.problemId)));
+  }
+
   ok(res, evaluations.findAll());
 };
 

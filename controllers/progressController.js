@@ -33,6 +33,11 @@ const create = (req, res) => {
     return fail(res, 400, 'VALIDATION_ERROR', 'userId, problemId, and status are required');
   if (!VALID_STATUSES.includes(status))
     return fail(res, 400, 'VALIDATION_ERROR', `status must be one of: ${VALID_STATUSES.join(', ')}`);
+
+  const requesterId = parseInt(req.headers['x-user-id']);
+  if (userId !== requesterId)
+    return fail(res, 403, 'FORBIDDEN', 'Candidates can only create progress for themselves');
+
   ok(res, progress.create({ userId, problemId, status, attempts: 1 }), 201);
 };
 
