@@ -359,12 +359,12 @@ Create a new problem.
   "constraints": "1 <= nums.length <= 10^5",
   "examples": [{ "input": "nums = [1,2,3,1]", "output": "true" }],
   "evalPrompt": "Reward hash set solution.",
-  "isPublic": false,
-  "createdBy": 2
+  "isPublic": false
 }
 ```
 
-**Required:** `title`, `difficulty`, `topic`, `type`, `description`, `createdBy`
+**Required:** `title`, `difficulty`, `topic`, `type`, `description`
+**Auto-assigned:** `createdBy` is derived from `x-user-id` header (so the creator can't be spoofed)
 **Enum — `difficulty`:** `easy | medium | hard`
 **Enum — `type`:** `algorithm | system-design | debugging`
 

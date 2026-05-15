@@ -139,11 +139,12 @@
             "url": "http://localhost:3000/problems",
             "header": [
               { "key": "Content-Type", "value": "application/json" },
-              { "key": "x-user-role", "value": "company" }
+              { "key": "x-user-role", "value": "company" },
+              { "key": "x-user-id", "value": "2" }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"title\": \"Contains Duplicate\",\n  \"difficulty\": \"easy\",\n  \"topic\": \"arrays\",\n  \"type\": \"algorithm\",\n  \"description\": \"Given an integer array nums, return true if any value appears at least twice.\",\n  \"constraints\": \"1 <= nums.length <= 10^5\",\n  \"examples\": [{\"input\": \"nums = [1,2,3,1]\", \"output\": \"true\"}],\n  \"evalPrompt\": \"Reward hash set solution. Penalize sorting approach.\",\n  \"createdBy\": 2\n}"
+              "raw": "{\n  \"title\": \"Contains Duplicate\",\n  \"difficulty\": \"easy\",\n  \"topic\": \"arrays\",\n  \"type\": \"algorithm\",\n  \"description\": \"Given an integer array nums, return true if any value appears at least twice.\",\n  \"constraints\": \"1 <= nums.length <= 10^5\",\n  \"examples\": [{\"input\": \"nums = [1,2,3,1]\", \"output\": \"true\"}],\n  \"evalPrompt\": \"Reward hash set solution. Penalize sorting approach.\",\n  \"isPublic\": false\n}"
             }
           }
         },

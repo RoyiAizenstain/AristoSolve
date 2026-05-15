@@ -27,14 +27,19 @@ const getById = (req, res) => {
 };
 
 const create = (req, res) => {
-  const { title, difficulty, topic, type, description, createdBy } = req.body;
-  if (!title || !difficulty || !topic || !type || !description || !createdBy)
-    return fail(res, 400, 'VALIDATION_ERROR', 'title, difficulty, topic, type, description, and createdBy are required');
+  const { title, difficulty, topic, type, description } = req.body;
+  if (!title || !difficulty || !topic || !type || !description)
+    return fail(res, 400, 'VALIDATION_ERROR', 'title, difficulty, topic, type, and description are required');
   if (!VALID_DIFFICULTIES.includes(difficulty))
     return fail(res, 400, 'VALIDATION_ERROR', `difficulty must be one of: ${VALID_DIFFICULTIES.join(', ')}`);
   if (!VALID_TYPES.includes(type))
     return fail(res, 400, 'VALIDATION_ERROR', `type must be one of: ${VALID_TYPES.join(', ')}`);
-  const problem = problems.create(req.body);
+
+  const createdBy = parseInt(req.headers['x-user-id']);
+  if (isNaN(createdBy))
+    return fail(res, 400, 'VALIDATION_ERROR', 'x-user-id header is required to identify the creator');
+
+  const problem = problems.create({ ...req.body, createdBy });
   ok(res, problem, 201);
 };
 
