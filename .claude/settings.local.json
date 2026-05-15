@@ -4,7 +4,8 @@
       "PowerShell(Get-Command node)",
       "PowerShell(Get-ChildItem \"C:\\\\Program Files\\\\nodejs\\\\node.exe\" -ErrorAction SilentlyContinue; Get-ChildItem \"$env:APPDATA\\\\nvm\" -ErrorAction SilentlyContinue; Get-ChildItem \"$env:ProgramFiles\\\\nvm\" -ErrorAction SilentlyContinue)",
       "PowerShell(winget install --id Git.Git -e --source winget)",
-      "PowerShell($env:PATH = [System.Environment]::GetEnvironmentVariable\\(\"PATH\",\"Machine\"\\) + \";\" + [System.Environment]::GetEnvironmentVariable\\(\"PATH\",\"User\"\\); git --version)"
+      "PowerShell($env:PATH = [System.Environment]::GetEnvironmentVariable\\(\"PATH\",\"Machine\"\\) + \";\" + [System.Environment]::GetEnvironmentVariable\\(\"PATH\",\"User\"\\); git --version)",
+      "PowerShell($env:PATH = [System.Environment]::GetEnvironmentVariable\\(\"PATH\",\"Machine\"\\) + \";\" + [System.Environment]::GetEnvironmentVariable\\(\"PATH\",\"User\"\\); cd \"c:\\\\Users\\\\shirl\\\\Desktop\\\\AristoSolve\"; git add README.md; git commit -m \"Expand README with full API reference, setup, and assumptions\"; git push)"
     ]
   }
 }
