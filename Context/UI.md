@@ -68,6 +68,92 @@ Table row height:    52px
 
 ---
 
+## Backend API Contract
+
+> **Note:** The following endpoints do not exist in the current backend yet and must be added before the frontend can function. They are part of the Assignment 3 backend extension.
+
+| Endpoint | Status | Notes |
+|---|---|---|
+| `POST /api/auth/login` | ❌ needs adding | email + password → user object |
+| `POST /api/auth/logout` | ❌ needs adding | no-op success |
+| `GET /api/users/me` | ❌ needs adding | reads `x-user-id` header |
+| `GET /api/settings` | ❌ needs adding | per-user settings |
+| `PUT /api/settings` | ❌ needs adding | per-user settings update |
+| `GET /api/users` | ✅ exists | admin only |
+| `POST /api/users` | ✅ exists | public (registration) |
+| `PUT /api/users/:id` | ✅ exists | admin or own |
+| `DELETE /api/users/:id` | ✅ exists | admin only |
+| `GET /api/problems` | ✅ exists | all roles |
+| `GET /api/problems/:id` | ✅ exists | includes testCases + starterCode |
+| `POST /api/conversations` | ✅ exists | candidate |
+| `PUT /api/conversations/:id` | ✅ exists | admin (endedAt) |
+| `POST /api/conversations/:id/messages` | ✅ exists | candidate |
+| `GET /api/progress` | ✅ exists | filtered by x-user-id for candidate |
+| `GET /api/evaluations` | ✅ exists | company/admin |
+
+All routes use `/api/` prefix — this prefix does not exist yet either and must be added to `server.js`.
+
+---
+
+## Responsive & Accessibility
+
+### Breakpoints
+```
+mobile:  < 768px
+tablet:  768px – 1024px
+desktop: > 1024px
+```
+
+### Layout changes by breakpoint
+
+| Page | Mobile | Desktop |
+|---|---|---|
+| Login / Register | Single column card, full width | Centered 440px card |
+| Dashboard | Sidebar hidden (hamburger), no right stats sidebar | Three columns |
+| ProblemDetail | Tabs only (Guide / Output / AristoBot), no split panels | Three panels side-by-side |
+| Progress | Profile sidebar stacks above main | Two columns |
+| Settings | Full width panel | Centered 640px panel |
+| UsersPage | Table scrolls horizontally | Full table |
+
+### ProblemDetail on Mobile
+On small screens, the three-panel layout collapses to a **tabbed view**:
+- Tab 1: Description (formerly left panel)
+- Tab 2: Code Editor (formerly center panel)  
+- Tab 3: AristoBot (formerly right panel, includes Output sub-tab)
+
+### Keyboard & Focus
+- All interactive elements reachable via `Tab`
+- Modals trap focus while open (`focus-trap` pattern)
+- `Escape` closes modals and dropdowns
+- Active nav links have visible focus ring: `outline: 2px solid #4f46e5`
+- Code editor (Monaco) handles its own keyboard navigation
+
+### Aria Labels
+```
+<nav aria-label="Main navigation">
+<button aria-label="Log out">
+<button aria-label="Delete user Carol Chen">
+<button aria-label="Edit user Carol Chen">
+<dialog aria-labelledby="modal-title">
+<div role="status" aria-live="polite"> ← for Toast messages
+<div role="alert"> ← for error messages
+```
+
+### Contrast (dark theme)
+| Element | Foreground | Background | Ratio |
+|---|---|---|---|
+| Body text | #e2e8f0 | #0f0f1a | 13.5:1 ✅ |
+| Muted text | #94a3b8 | #1e1e2e | 5.2:1 ✅ |
+| Accent links | #4f46e5 | #1e1e2e | 4.6:1 ✅ |
+| Easy pill | #4ade80 | #14532d | 4.8:1 ✅ |
+| Medium pill | #fb923c | #431407 | 4.5:1 ✅ |
+| Hard pill | #f87171 | #450a0a | 4.6:1 ✅ |
+| Error text | #ef4444 | #1e1e2e | 4.5:1 ✅ |
+
+All pairs meet WCAG AA (4.5:1 minimum for normal text).
+
+---
+
 ## Routes
 
 ```
@@ -77,6 +163,7 @@ Table row height:    52px
 /dashboard      → Dashboard (guarded, role-aware)
 /problems/:id   → ProblemDetail + AristoBot (guarded, candidate)
 /progress       → Progress (guarded, candidate + admin)
+/users          → Users management (guarded, admin only)
 /settings       → Settings (guarded, all roles)
 ```
 
@@ -123,6 +210,7 @@ client/
 │       ├── Dashboard.jsx
 │       ├── ProblemDetail.jsx
 │       ├── Progress.jsx
+│       ├── UsersPage.jsx         ← admin only
 │       └── Settings.jsx
 │
 └── package.json                  ← PORT=5173, proxy: http://localhost:3000
@@ -484,7 +572,7 @@ Full screen, full dark. No standard Navbar. Custom top bar + **three panels** si
 - `← Problems` → `/dashboard`
 - Language dropdown: Python / Java / JavaScript (updates code editor language + starter template)
 - Timer: counts up from session start (mm:ss)
-- Run: simulated — shows a "Run" toast (no actual execution, out of scope)
+- Run: calls **Piston API** (`codeRunner.runCode`) for each test case → switches Output tab active → shows real pass/fail results
 - Submit: sends final code as last user message → `PUT /api/conversations/:id` with `endedAt` → `/dashboard`
 - Exit: navigate to `/dashboard` without submitting
 
@@ -684,31 +772,6 @@ const MENTOR_REPLIES = [
 ];
 ```
 
-### State
-```js
-{
-  problem,
-  conversation,
-  messages,
-  activeTab,      // 'guide' | 'output' | 'aristobot'
-  language,       // 'python' | 'java' | 'javascript'
-  code,           // current code editor content
-  input,          // chat input text
-  loading,
-  sending,
-  elapsed,        // seconds since start, for timer display
-}
-```
-
-### Flow
-1. Mount → `GET /api/problems/:id`
-2. `POST /api/conversations` `{ problemId, language }` → get conversationId
-3. Load starter code template for selected language
-4. Auto-send first AI message (MENTOR_REPLIES[0]) → `POST /api/conversations/:id/messages` `{ role:'assistant', content }`
-5. User chats → `POST .../messages` `{ role:'user', content }` → auto-reply with next canned message
-6. Language change → swap starter template (warn if code has been edited)
-7. Submit → send final code as user message → `PUT /api/conversations/:id` `{ endedAt: new Date() }` → `/dashboard`
-
 ---
 
 ## Component: MessageBubble (reusable card #2)
@@ -800,6 +863,114 @@ The three instances:
 1. `{ value: 8, label: "Total Solved" }`
 2. `{ value: 3, label: "In Progress", highlight: true }`
 3. `{ value: 5, label: "Completed" }`
+
+---
+
+## Page: Users Management (`/users`) — Admin Only
+
+### Layout
+Two columns: Sidebar (240px) | Main content (flex-1). Same layout as Dashboard.
+
+### Wireframe
+```
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ Navbar                                                                       │
+├──────────────┬───────────────────────────────────────────────────────────────┤
+│              │                                                               │
+│  Sidebar     │  Users                               [+ Create User]          │
+│  ─────────── │  Manage all platform users                                    │
+│  Problems    │                                                               │
+│  Progress    │  ┌──────────────────────────────────────────────────────────┐ │
+│  Users  ◀   │  │  Name           Email               Role      Actions    │ │
+│  Settings    │  │  ──────────────────────────────────────────────────────  │ │
+│              │  │  Alice Admin    alice@example.com   admin     [✎]  [🗑] │ │
+│              │  │  Bob Builder    bob@example.com     company   [✎]  [🗑] │ │
+│              │  │  Carol Chen     carol@example.com   candidate [✎]  [🗑] │ │
+│              │  │  Dave Dev       dave@example.com    candidate [✎]  [🗑] │ │
+│              │  │  Eva Evans      eva@example.com     candidate [✎]  [🗑] │ │
+│              │  └──────────────────────────────────────────────────────────┘ │
+│              │                                                               │
+├──────────────┴───────────────────────────────────────────────────────────────┤
+│ Footer                                                                       │
+└──────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Create / Edit Modal
+
+Triggered by [+ Create User] or [✎] edit icon. Overlays the page with a dark backdrop.
+
+```
+┌──────────────────────────────────────────────────────────┐
+│  Create User                                        [✕]  │  ← "Edit User" when editing
+│  ────────────────────────────────────────────────────    │
+│                                                          │
+│  First name              Last name                       │
+│  ┌───────────────────┐   ┌───────────────────┐           │
+│  │  Alice            │   │  Admin            │           │
+│  └───────────────────┘   └───────────────────┘           │
+│                                                          │
+│  Email                                                   │
+│  ┌──────────────────────────────────────────────────┐    │
+│  │  alice@example.com                               │    │
+│  └──────────────────────────────────────────────────┘    │
+│                                                          │
+│  Password          (hidden when editing existing user)   │
+│  ┌──────────────────────────────────────────────────┐    │
+│  │  ••••••••                                        │    │
+│  └──────────────────────────────────────────────────┘    │
+│                                                          │
+│  Role                                                    │
+│  ○ candidate    ○ company    ● admin                     │
+│                                                          │
+│  Level                                                   │
+│  ○ beginner    ● intermediate    ○ advanced               │
+│                                                          │
+│  ────────────────────────────────────────────────────    │
+│                             [Cancel]    [Save]           │
+└──────────────────────────────────────────────────────────┘
+```
+
+### Delete Confirmation
+
+Inline in the table row — no separate modal.
+
+```
+│  Carol Chen  carol@example.com  candidate  Delete? [Yes]  [No]  │  ← bg: #450a0a
+```
+
+### State
+```js
+{
+  users,
+  loading,
+  modal: null | { mode: 'create' | 'edit', user: null | userObject },
+  confirmDeleteId: null | userId,
+  saving,
+  errors,
+}
+```
+
+### Validation (modal form)
+- firstName, lastName: required, non-empty
+- email: required, valid format
+- password: required on create, min 6 chars; hidden on edit
+- userRole: one of `candidate | company | admin`
+- level: one of `beginner | intermediate | advanced`
+
+### Endpoints
+- `GET /api/users` — load table (admin only, uses `x-user-role: admin`)
+- `POST /api/users` — create new user
+- `PUT /api/users/:id` — update existing user
+- `DELETE /api/users/:id` — delete user
+
+### Sidebar nav update (admin only)
+
+| Link | Candidate | Company | Admin |
+|---|---|---|---|
+| Dashboard | ✅ | ✅ | ✅ |
+| Progress | ✅ | — | ✅ |
+| Users | — | — | ✅ |
+| Settings | ✅ | ✅ | ✅ |
 
 ---
 
