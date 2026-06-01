@@ -101,7 +101,8 @@ client/
 │   │   ├── messages.js
 │   │   ├── evaluations.js
 │   │   ├── progress.js
-│   │   └── settings.js
+│   │   ├── settings.js
+│   │   └── codeRunner.js         ← Piston API live execution
 │   │
 │   ├── components/
 │   │   ├── Navbar.jsx            ← top bar, logo, logout
@@ -555,8 +556,119 @@ const STARTER = {
 | Tab | Content |
 |---|---|
 | Guide | Problem description (mirrors left panel, useful on mobile) |
-| Output | Conversation summary: total messages, start time, status, language used |
+| Output | **Live test results** after clicking Run |
 | AristoBot | Chat interface (default active) |
+
+### Output Tab — Live Code Execution (Piston API)
+
+When user clicks **Run** in the top bar:
+1. Frontend collects `language` + `code` from the editor
+2. Calls `codeRunner.runCode(language, code, problem.testCases)` for each test case in parallel
+3. Output tab becomes active automatically
+4. Results shown as pass/fail per test case
+
+```
+┌──────────────────────────────────────────────────────┐
+│  Guide      Output ←active      AristoBot            │
+│  ─────────────────────────────────────────────────── │
+│                                                      │
+│  Test Results                        2 / 3 passed    │
+│                                                      │
+│  ✓  Example 1                                12ms    │
+│     Input:    4  /  2 7 11 15  /  target 9           │
+│     Expected: 0 1                                    │
+│     Output:   0 1                                    │
+│                                                      │
+│  ✓  Example 2                                10ms    │
+│     Input:    3  /  3 2 4  /  target 6               │
+│     Expected: 1 2                                    │
+│     Output:   1 2                                    │
+│                                                      │
+│  ✗  Duplicate values              bg: #450a0a  8ms   │
+│     Input:    2  /  3 3  /  target 6                 │
+│     Expected: 0 1                                    │
+│     Output:   []                                     │
+│     Stderr:   (none)                                 │
+│                                                      │
+└──────────────────────────────────────────────────────┘
+```
+
+### codeRunner.js Service
+
+```js
+const PISTON_URL = 'https://emkc.org/api/v2/piston/execute';
+
+const LANGUAGE_MAP = {
+  python:     { language: 'python',     version: '3.10.0' },
+  javascript: { language: 'javascript', version: '18.15.0' },
+  java:       { language: 'java',       version: '15.0.2' },
+};
+
+async function runTestCase(language, code, stdin) {
+  const { language: lang, version } = LANGUAGE_MAP[language];
+  const res = await fetch(PISTON_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      language: lang,
+      version,
+      files: [{ content: code }],
+      stdin,
+    }),
+  });
+  const data = await res.json();
+  return {
+    stdout: data.run.stdout.trim(),
+    stderr: data.run.stderr.trim(),
+    exitCode: data.run.code,
+  };
+}
+
+export async function runCode(language, code, testCases) {
+  return Promise.all(
+    testCases.map(async (tc) => {
+      const start = Date.now();
+      const { stdout, stderr, exitCode } = await runTestCase(language, code, tc.stdin);
+      return {
+        label:    tc.label,
+        stdin:    tc.stdin,
+        expected: tc.expected,
+        output:   stdout,
+        stderr,
+        passed:   exitCode === 0 && stdout === tc.expected,
+        ms:       Date.now() - start,
+      };
+    })
+  );
+}
+```
+
+### Updated State
+```js
+{
+  problem,
+  conversation,
+  messages,
+  activeTab,        // 'guide' | 'output' | 'aristobot'
+  language,         // 'python' | 'java' | 'javascript'
+  code,             // current editor content
+  testResults,      // null | array of { label, expected, output, passed, stderr, ms }
+  running,          // true while Piston calls are in flight
+  input,
+  loading,
+  sending,
+  elapsed,
+}
+```
+
+### Updated Flow
+1. Mount → `GET /api/problems/:id` (includes testCases + starterCode)
+2. `POST /api/conversations` `{ problemId, language }` → get conversationId
+3. Load `problem.starterCode[language]` into editor
+4. Auto-send first AristoBot message
+5. **Run clicked** → `codeRunner.runCode(language, code, problem.testCases)` → switch to Output tab → show results
+6. Language changed → swap `problem.starterCode[newLanguage]` into editor (warn if code was modified)
+7. **Submit** → send final code as last user message → `PUT /api/conversations/:id` `{ endedAt }` → `/dashboard`
 
 ### Mocked AI Responses (cycle in order per conversation)
 ```js

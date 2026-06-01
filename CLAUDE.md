@@ -92,10 +92,14 @@ Auth is simulated via the `x-user-role` request header.
 
 ### problems
 ```json
-{ "id": 1, "title": "", "difficulty": "easy|medium|hard", "topic": "arrays|trees|graphs|dp|strings|...", "type": "algorithm|system-design|debugging", "description": "", "constraints": "", "examples": [], "evalPrompt": "", "isPublic": true, "createdBy": 1, "createdAt": "" }
+{ "id": 1, "title": "", "difficulty": "easy|medium|hard", "topic": "arrays|trees|graphs|dp|strings|...", "type": "algorithm|system-design|debugging", "description": "", "constraints": "", "examples": [], "testCases": [{ "label": "", "stdin": "", "expected": "" }], "starterCode": { "python": "", "javascript": "", "java": "" }, "evalPrompt": "", "isPublic": true, "createdBy": 1, "createdAt": "" }
 ```
 `isPublic: true` = open self-learning problem. `isPublic: false` = private company recruitment test.
 `GET /problems` supports query params: `?difficulty=easy&topic=arrays&type=algorithm`
+
+`testCases` — each entry has `stdin` (passed to the program via stdin) and `expected` (expected stdout, trimmed). Used by the frontend to run live code execution via the Piston API.
+
+`starterCode` — per-language starter template that includes the I/O harness. The user fills in the solution function body. The harness reads stdin and prints the result so test cases can be compared automatically.
 
 ### conversations
 ```json
