@@ -15,7 +15,7 @@ No test runner is configured. Test endpoints manually using the Postman collecti
 
 ## What This Is
 
-AristoSolve is a backend API for an AI-guided problem-solving platform (think NeetCode, but the AI guides thinking via chat rather than the user writing code directly). This is Assignment 2: in-memory mock data only, no database. The same API contract will connect to MySQL in a later assignment.
+AristoSolve is a backend API for an AI-guided problem-solving platform (think NeetCode). Users write code in a built-in editor and simultaneously chat with an AI mentor (AristoBot) that guides their thinking without giving answers directly. This is Assignment 2: in-memory mock data only, no database. The same API contract will connect to MySQL in a later assignment.
 
 - Runtime: Node.js + Express
 - Port: 3000
