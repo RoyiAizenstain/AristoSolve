@@ -68,6 +68,57 @@ Table row height:    52px
 
 ---
 
+## Development Phases
+
+The UI is built in two phases. **Phase 1 must be complete and clean before Phase 2 begins.**
+
+### Phase 1 — Assignment 3 (build this first)
+
+| Page / Feature | In Scope | Notes |
+|---|---|---|
+| Login | ✅ | Full validation, loading, error states |
+| Register | ✅ | name + email + password + role |
+| Navbar + Footer | ✅ | Logo, links, logout |
+| Dashboard | ✅ | Single view for all roles — cards + table |
+| ProblemDetail | ✅ Partial | Two panels only (description + AristoBot) |
+| Code area | ✅ `<textarea>` | Plain textarea, no Monaco yet |
+| AristoBot chat | ✅ Mocked | Canned replies only, no SSE |
+| Settings | ✅ | 3 editable fields |
+| RequireAuth | ✅ | Redirect if not logged in |
+| README | ✅ | Run instructions |
+| Monaco editor | ❌ Phase 2 | |
+| Run button / Piston | ❌ Phase 2 | |
+| Role-aware dashboard | ❌ Phase 2 | |
+| Progress page | ❌ Phase 2 | |
+| Users management page | ❌ Phase 2 | |
+| SSE streaming | ❌ Phase 2 | |
+
+### Phase 2 — Full Product (after submission)
+
+Each item is **additive** — nothing from Phase 1 is rewritten, only extended.
+
+| Feature | What changes |
+|---|---|
+| Monaco editor | Replace `<textarea>` in ProblemDetail |
+| Piston live execution | Add Run button + Output tab to ProblemDetail |
+| Role-aware dashboard | Add role check to existing Dashboard component |
+| Three-panel layout | Expand ProblemDetail from 2 → 3 panels |
+| Progress page | New `Progress.jsx` page, `/api/progress` already exists |
+| Users management | New `UsersPage.jsx`, `/api/users` already exists |
+| SSE AristoBot | Replace mocked replies with `EventSource` stream |
+| Real auth / MySQL | Backend swap, frontend `api.js` stays the same |
+
+### The key rule for Phase 1
+
+Build **clean and extensible**, not quick and hacky:
+- Proper folder structure from day one
+- `api.js` wrapper handles all headers centrally
+- Components accept props so upgrading later is drop-in
+
+If Phase 1 is clean, Phase 2 is just adding files and replacing a few lines.
+
+---
+
 ## Backend API Contract
 
 > **Note:** The following endpoints do not exist in the current backend yet and must be added before the frontend can function. They are part of the Assignment 3 backend extension.
@@ -758,7 +809,10 @@ export async function runCode(language, code, testCases) {
 6. Language changed → swap `problem.starterCode[newLanguage]` into editor (warn if code was modified)
 7. **Submit** → send final code as last user message → `PUT /api/conversations/:id` `{ endedAt }` → `/dashboard`
 
-### Mocked AI Responses (cycle in order per conversation)
+### AristoBot Responses — Phase 1: Mocked (Assignment 3)
+
+Canned replies cycle in order per conversation. No network call.
+
 ```js
 const MENTOR_REPLIES = [
   "What's your first instinct when you see this problem?",
@@ -771,6 +825,115 @@ const MENTOR_REPLIES = [
   "What would happen if all elements in the array are the same?",
 ];
 ```
+
+Current send flow (mocked):
+1. User types → `POST /api/conversations/:id/messages` `{ role:'user', content }`
+2. Frontend picks next `MENTOR_REPLIES[index % length]`
+3. `POST /api/conversations/:id/messages` `{ role:'assistant', content: reply }`
+4. Both messages appended to `messages` state
+
+---
+
+### AristoBot Responses — Phase 2: Real Streaming (Future, SSE)
+
+When real AI replaces mocked replies, use **Server-Sent Events (SSE)** for token-by-token streaming. SSE is preferred over WebSockets here because the stream is one-directional (server → client).
+
+#### UX during streaming
+
+```
+│  ┌──────────────────────────────────────────────────────┐   │
+│  │ ◆  Good thinking. Have you considered using a hash   │   │ ← tokens arrive one-by-one
+│  │    map to store▌                                     │   │   blinking cursor at end
+│  └──────────────────────────────────────────────────────┘   │
+```
+
+- Streaming bubble appears immediately with a blinking cursor
+- Tokens appended character-by-character as they arrive
+- Send button + chat input disabled while streaming
+- On `[DONE]` event: cursor removed, message saved to backend
+
+#### New backend endpoint
+
+```
+GET /api/conversations/:id/stream
+Headers: x-user-id, x-user-role
+Response: Content-Type: text/event-stream
+```
+
+```js
+// routes/conversations.js (future addition)
+router.get('/:id/stream', auth(['candidate']), async (req, res) => {
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+
+  const stream = await anthropic.messages.stream({
+    model: 'claude-opus-4-7',
+    max_tokens: 500,
+    system: 'You are AristoBot, an AI mentor. Guide the user\'s thinking without giving the answer.',
+    messages: conversationHistory,
+  });
+
+  for await (const chunk of stream) {
+    if (chunk.type === 'content_block_delta') {
+      res.write(`data: ${JSON.stringify({ token: chunk.delta.text })}\n\n`);
+    }
+  }
+
+  res.write('data: [DONE]\n\n');
+  res.end();
+});
+```
+
+#### Frontend — replace mocked reply logic in ProblemDetail.jsx
+
+```js
+async function streamAristoReply(convId) {
+  setStreaming(true);
+  setStreamingText('');
+
+  const eventSource = new EventSource(`/api/conversations/${convId}/stream`);
+
+  eventSource.onmessage = (e) => {
+    if (e.data === '[DONE]') {
+      eventSource.close();
+      setStreaming(false);
+      // save final assembled message to backend + state
+      saveAssistantMessage(streamingTextRef.current);
+      return;
+    }
+    const { token } = JSON.parse(e.data);
+    streamingTextRef.current += token;
+    setStreamingText(t => t + token);
+  };
+
+  eventSource.onerror = () => {
+    eventSource.close();
+    setStreaming(false);
+  };
+}
+```
+
+#### State additions for streaming
+
+```js
+{
+  // ... existing state ...
+  streaming,       // bool — true while SSE stream is open
+  streamingText,   // string — partial AI message being received
+}
+```
+
+#### Migration path (mocked → real)
+
+Only `ProblemDetail.jsx` changes. The rest of the app is unaffected:
+
+| Now (Phase 1) | Future (Phase 2) |
+|---|---|
+| Pick next `MENTOR_REPLIES[i]` | Open `EventSource` to `/stream` |
+| Immediately POST assistant message | Stream tokens → POST on `[DONE]` |
+| No loading state needed | `streaming` state disables input |
+| No backend endpoint needed | Needs Claude API key + SSE endpoint |
 
 ---
 

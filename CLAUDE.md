@@ -23,6 +23,48 @@ AristoSolve is a backend API for an AI-guided problem-solving platform (think Ne
 
 ---
 
+## Development Phases
+
+The project is built in two phases. **Always check which phase is active before adding features.**
+
+### Phase 1 — Assignment 3 (current)
+
+Minimum viable frontend that satisfies the assignment requirements. Keep it clean and extensible — no shortcuts that would require rewriting in Phase 2.
+
+**In scope:**
+- Login + Register pages
+- Navbar, Footer, Layout, RequireAuth
+- Dashboard — problems cards + table (single view, all roles)
+- ProblemDetail — two panels (description + AristoBot chat), plain `<textarea>` for code, mocked AI replies
+- Settings page — 3 editable fields
+- Backend additions: `/api` prefix, auth routes, `/api/users/me`, settings model
+
+**Deliberately deferred to Phase 2:**
+- Monaco editor (use `<textarea>` now)
+- Piston live code execution (no Run button yet)
+- Role-aware dashboard (one view for everyone)
+- Progress page
+- Users management page (admin)
+- Three-panel layout (two panels for now)
+- SSE streaming for AristoBot
+
+### Phase 2 — Full Product (after submission)
+
+Each feature is **additive** — nothing from Phase 1 gets rewritten, only extended.
+
+| Feature | Replaces / Extends |
+|---|---|
+| Monaco editor | `<textarea>` in ProblemDetail |
+| Piston live execution | Add Run button + Output tab |
+| Role-aware dashboard | Add role check to existing Dashboard |
+| Progress page | New page, `/api/progress` already exists |
+| Users management (admin CRUD) | New page, `/api/users` already exists |
+| Three-panel layout | Expand ProblemDetail from 2 → 3 panels |
+| SSE streaming AristoBot | Replace mocked replies in ProblemDetail |
+| MySQL / real auth | Backend swap, frontend unchanged |
+
+---
+
 ## Architecture
 
 The codebase follows a strict three-layer separation:
