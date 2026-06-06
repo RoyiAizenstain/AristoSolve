@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import Layout from '../components/Layout';
 import Toast from '../components/Toast';
+import PageLoader from '../components/PageLoader';
 import { getSettings, updateSettings } from '../services/settings';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -15,7 +16,10 @@ export default function Settings() {
 
   useEffect(() => {
     getSettings()
-      .then(data => { setForm(data); setOriginal(data); })
+      .then(data => {
+        setForm(data);
+        setOriginal(data);
+      })
       .catch(err => setToast({ message: err.message, type: 'error' }))
       .finally(() => setLoading(false));
   }, []);
@@ -43,6 +47,10 @@ export default function Settings() {
     try {
       const updated = await updateSettings(form);
       setOriginal(updated);
+      if (updated.theme) {
+        document.documentElement.setAttribute('data-theme', updated.theme);
+        localStorage.setItem('aristosolve_theme', updated.theme);
+      }
       setToast({ message: 'Settings saved', type: 'success' });
     } catch (err) {
       setToast({ message: err.message, type: 'error' });
@@ -66,7 +74,7 @@ export default function Settings() {
         </div>
 
         {loading ? (
-          <p className="muted">Loading…</p>
+          <PageLoader />
         ) : (
           <form className="settings-card" onSubmit={handleSubmit} noValidate>
 

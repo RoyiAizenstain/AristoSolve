@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import Layout from '../components/Layout';
 import Toast from '../components/Toast';
+import PageLoader from '../components/PageLoader';
 import { get, post, put, del } from '../services/api';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -164,7 +165,7 @@ export default function UsersPage() {
           <button className="btn btn-primary" onClick={() => setModal({})}>+ Create User</button>
         </div>
 
-        {loading && <p className="muted">Loading…</p>}
+        {loading && <PageLoader />}
 
         {!loading && (
           <div className="table-wrap">

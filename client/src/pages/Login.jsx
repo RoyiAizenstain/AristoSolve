@@ -46,7 +46,7 @@ export default function Login() {
   return (
     <div className="auth-page">
       <div className="auth-header">
-        <span className="auth-brand">◆ AristoSolve</span>
+        <span className="auth-brand">🤖 AristoSolve</span>
         <p className="auth-tagline">AI-guided problem solving platform</p>
       </div>
 

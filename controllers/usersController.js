@@ -84,6 +84,13 @@ const remove = (req, res) => {
   const id = parseInt(req.params.id);
   if (isNaN(id)) return fail(res, 400, 'VALIDATION_ERROR', 'ID must be numeric');
 
+  const requesterId = parseInt(req.headers['x-user-id']);
+  if (id === requesterId) {
+    const adminCount = users.findAll().filter(u => u.userRole === 'admin').length;
+    if (adminCount <= 1)
+      return fail(res, 403, 'FORBIDDEN', 'Cannot delete the last admin account');
+  }
+
   const deleted = users.remove(id);
   if (!deleted) return fail(res, 404, 'NOT_FOUND', `User ${id} not found`);
   ok(res, { message: `User ${id} deleted` });

@@ -15,7 +15,19 @@ const getAll = (req, res) => {
     return fail(res, 400, 'VALIDATION_ERROR', `difficulty must be one of: ${VALID_DIFFICULTIES.join(', ')}`);
   if (type && !VALID_TYPES.includes(type))
     return fail(res, 400, 'VALIDATION_ERROR', `type must be one of: ${VALID_TYPES.join(', ')}`);
-  ok(res, problems.findAll({ difficulty, topic, type }));
+
+  const role = req.headers['x-user-role'];
+  const requesterId = parseInt(req.headers['x-user-id']);
+  let all = problems.findAll({ difficulty, topic, type });
+
+  if (role === 'candidate') {
+    all = all.filter(p => p.isPublic);
+  } else if (role === 'company') {
+    all = all.filter(p => p.isPublic || p.createdBy === requesterId);
+  }
+  // admin sees everything
+
+  ok(res, all);
 };
 
 const getById = (req, res) => {
@@ -23,6 +35,14 @@ const getById = (req, res) => {
   if (isNaN(id)) return fail(res, 400, 'VALIDATION_ERROR', 'ID must be numeric');
   const problem = problems.findById(id);
   if (!problem) return fail(res, 404, 'NOT_FOUND', `Problem ${id} not found`);
+
+  const role = req.headers['x-user-role'];
+  const requesterId = parseInt(req.headers['x-user-id']);
+  if (!problem.isPublic && role === 'candidate')
+    return fail(res, 403, 'FORBIDDEN', 'Access denied');
+  if (!problem.isPublic && role === 'company' && problem.createdBy !== requesterId)
+    return fail(res, 403, 'FORBIDDEN', 'Access denied');
+
   ok(res, problem);
 };
 
@@ -46,21 +66,37 @@ const create = (req, res) => {
 const update = (req, res) => {
   const id = parseInt(req.params.id);
   if (isNaN(id)) return fail(res, 400, 'VALIDATION_ERROR', 'ID must be numeric');
+
+  const problem = problems.findById(id);
+  if (!problem) return fail(res, 404, 'NOT_FOUND', `Problem ${id} not found`);
+
+  const role = req.headers['x-user-role'];
+  const requesterId = parseInt(req.headers['x-user-id']);
+  if (role === 'company' && problem.createdBy !== requesterId)
+    return fail(res, 403, 'FORBIDDEN', 'You can only edit your own problems');
+
   const { difficulty, type } = req.body;
   if (difficulty && !VALID_DIFFICULTIES.includes(difficulty))
     return fail(res, 400, 'VALIDATION_ERROR', `difficulty must be one of: ${VALID_DIFFICULTIES.join(', ')}`);
   if (type && !VALID_TYPES.includes(type))
     return fail(res, 400, 'VALIDATION_ERROR', `type must be one of: ${VALID_TYPES.join(', ')}`);
-  const problem = problems.update(id, req.body);
-  if (!problem) return fail(res, 404, 'NOT_FOUND', `Problem ${id} not found`);
-  ok(res, problem);
+
+  ok(res, problems.update(id, req.body));
 };
 
 const remove = (req, res) => {
   const id = parseInt(req.params.id);
   if (isNaN(id)) return fail(res, 400, 'VALIDATION_ERROR', 'ID must be numeric');
-  const deleted = problems.remove(id);
-  if (!deleted) return fail(res, 404, 'NOT_FOUND', `Problem ${id} not found`);
+
+  const problem = problems.findById(id);
+  if (!problem) return fail(res, 404, 'NOT_FOUND', `Problem ${id} not found`);
+
+  const role = req.headers['x-user-role'];
+  const requesterId = parseInt(req.headers['x-user-id']);
+  if (role === 'company' && problem.createdBy !== requesterId)
+    return fail(res, 403, 'FORBIDDEN', 'You can only delete your own problems');
+
+  problems.remove(id);
   ok(res, { message: `Problem ${id} deleted` });
 };
 

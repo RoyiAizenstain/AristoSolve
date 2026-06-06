@@ -1,4 +1,4 @@
-import { get } from './api';
+import { get, post, put, del } from './api';
 
 export function listProblems(params = {}) {
   const qs = new URLSearchParams(params).toString();
@@ -7,4 +7,16 @@ export function listProblems(params = {}) {
 
 export function getProblem(id) {
   return get(`/problems/${id}`);
+}
+
+export function createProblem(data) {
+  return post('/problems', data);
+}
+
+export function updateProblem(id, data) {
+  return put(`/problems/${id}`, data);
+}
+
+export function deleteProblem(id) {
+  return del(`/problems/${id}`);
 }

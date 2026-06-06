@@ -52,7 +52,7 @@ export default function Register() {
   return (
     <div className="auth-page">
       <div className="auth-header">
-        <span className="auth-brand">◆ AristoSolve</span>
+        <span className="auth-brand">🤖 AristoSolve</span>
       </div>
 
       <form className="auth-card" onSubmit={handleSubmit} noValidate>

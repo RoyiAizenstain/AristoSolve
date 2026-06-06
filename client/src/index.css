@@ -58,6 +58,34 @@
   --row-h:       52px;
 }
 
+/* ---- Light theme ---- */
+[data-theme="light"] {
+  --bg:           #f8f9fc;
+  --surface:      #ffffff;
+  --surface-2:    #f1f3f8;
+  --surface-3:    #e4e8f0;
+  --border:       #d1d9e6;
+  --text:         #0f172a;
+  --muted:        #475569;
+  --subtle:       #94a3b8;
+
+  --accent:       #4f46e5;
+  --accent-hover: #4338ca;
+  --accent-bg:    #ede9fe;
+
+  --error:        #dc2626;
+  --error-bg:     #fee2e2;
+  --success:      #16a34a;
+  --success-bg:   #dcfce7;
+
+  --easy-text:    #15803d;
+  --easy-bg:      #dcfce7;
+  --medium-text:  #c2410c;
+  --medium-bg:    #ffedd5;
+  --hard-text:    #dc2626;
+  --hard-bg:      #fee2e2;
+}
+
 /* ============================================================
    Reset
    ============================================================ */
@@ -222,14 +250,57 @@ textarea.input { height: auto; padding: 10px 12px; resize: vertical; }
 .muted   { color: var(--muted); }
 .subtle  { color: var(--subtle); }
 .spinner {
+  display: inline-block;
   width: 16px;
   height: 16px;
-  border: 2px solid rgba(255, 255, 255, 0.4);
+  border: 2px solid rgba(255, 255, 255, 0.3);
   border-top-color: #fff;
   border-radius: 50%;
   animation: spin 0.6s linear infinite;
+  flex-shrink: 0;
 }
+
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* ---- Full-page loader ---- */
+.page-loader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  height: 100%;
+  min-height: 300px;
+  width: 100%;
+}
+
+.page-loader-spinner {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent);
+  animation: spin 0.75s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  box-shadow: 0 0 16px color-mix(in srgb, var(--accent) 30%, transparent);
+}
+
+.page-loader-text {
+  font-size: var(--text-sm);
+  color: var(--muted);
+  letter-spacing: 0.03em;
+}
+
+/* ---- Skeleton pulse (inline loading rows) ---- */
+.skeleton {
+  background: var(--surface-2);
+  border-radius: var(--radius-input);
+  animation: pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.4; }
+}
 
 /* ============================================================
    Dashboard
@@ -436,7 +507,7 @@ textarea.input { height: auto; padding: 10px 12px; resize: vertical; }
 .pd-description {
   flex: 0 0 28%;
   border-right: 1px solid var(--border);
-  background: #161622;
+  background: var(--surface);
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -446,7 +517,7 @@ textarea.input { height: auto; padding: 10px 12px; resize: vertical; }
 .pd-editor {
   flex: 0 0 42%;
   border-right: 1px solid var(--border);
-  background: #0f0f1a;
+  background: var(--bg);
   display: flex;
   flex-direction: column;
   gap: 0;
@@ -469,7 +540,7 @@ textarea.input { height: auto; padding: 10px 12px; resize: vertical; }
   overflow-y: auto;
   max-height: 240px;
   flex-shrink: 0;
-  background: #0d0d16;
+  background: var(--surface-2);
 }
 
 .pd-test-case {
@@ -538,7 +609,7 @@ textarea.input { height: auto; padding: 10px 12px; resize: vertical; }
   width: 100%;
   flex: 1;
   min-height: 180px;
-  background: #0d0d16;
+  background: var(--bg);
   border: 1px solid var(--border);
   border-radius: var(--radius-input);
   color: var(--text);

@@ -128,7 +128,7 @@ export default function ProblemDetail() {
     navigate('/dashboard');
   }
 
-  if (loading) return <div className="pd-loading">Loading problem…</div>;
+  if (loading) return <div className="pd-loading"><div className="page-loader"><div className="page-loader-spinner" /><span className="page-loader-text">Loading problem…</span></div></div>;
   if (error)   return <div className="pd-loading error-text">{error}</div>;
 
   return (
@@ -252,7 +252,7 @@ export default function ProblemDetail() {
               <div className="pd-messages">
                 {messages.length === 0 && (
                   <div className="pd-empty-state">
-                    <div className="pd-bot-icon">◆</div>
+                    <div className="pd-bot-icon">🤖</div>
                     <p className="pd-bot-name">AristoBot</p>
                     <p className="muted" style={{ fontSize: 'var(--text-sm)', textAlign: 'center' }}>
                       I'll guide your thinking, but I won't give you the answer.

@@ -5,21 +5,26 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Commands
 
 ```bash
+# Backend (port 3000)
 npm start        # Run server (node server.js)
 npm run dev      # Run with nodemon (auto-restart on file changes)
+
+# Frontend (port 5173)
+cd client && npm start
 ```
 
-No test runner is configured. Test endpoints manually using the Postman collection at [docs/AristoSolve.postman_collection.json](docs/AristoSolve.postman_collection.json), or with curl passing `-H "x-user-role: admin"`.
+No test runner is configured. Test endpoints manually using the Postman collection at [docs/AristoSolve.postman_collection.json](docs/AristoSolve.postman_collection.json), or with curl passing `-H "x-user-role: admin" -H "x-user-id: 1"`.
 
 ---
 
 ## What This Is
 
-AristoSolve is a backend API for an AI-guided problem-solving platform (think NeetCode). Users write code in a built-in editor and simultaneously chat with an AI mentor (AristoBot) that guides their thinking without giving answers directly. This is Assignment 2: in-memory mock data only, no database. The same API contract will connect to MySQL in a later assignment.
+AristoSolve is a full-stack AI-guided problem-solving platform (think NeetCode). Users write code in a built-in editor and simultaneously chat with an AI mentor (AristoBot) that guides their thinking without giving answers directly.
 
-- Runtime: Node.js + Express
-- Port: 3000
-- Base URL: `http://localhost:3000`
+- Runtime: Node.js + Express (backend) + Create React App (frontend, NOT Vite)
+- Backend port: 3000 — Base URL: `http://localhost:3000`
+- Frontend port: 5173 — set via `PORT=5173` in `client/package.json`
+- Assignment 3: in-memory mock data only, no database
 
 ---
 
@@ -27,26 +32,30 @@ AristoSolve is a backend API for an AI-guided problem-solving platform (think Ne
 
 The project is built in two phases. **Always check which phase is active before adding features.**
 
-### Phase 1 — Assignment 3 (current)
+### Phase 1 — Assignment 3 (COMPLETE ✅)
 
-Minimum viable frontend that satisfies the assignment requirements. Keep it clean and extensible — no shortcuts that would require rewriting in Phase 2.
+All Phase 1 items are implemented and working.
 
-**In scope:**
-- Login + Register pages
-- Navbar, Footer, Layout, RequireAuth
-- Dashboard — problems cards + table (single view, all roles)
-- ProblemDetail — two panels (description + AristoBot chat), plain `<textarea>` for code, mocked AI replies
-- Settings page — 3 editable fields
-- Backend additions: `/api` prefix, auth routes, `/api/users/me`, settings model
+**Completed:**
+- Login + Register pages (validation, loading, error states)
+- Navbar with dark/light theme toggle (sun/moon icon), 🤖 branding
+- Footer, Layout, RequireAuth, RequireRole guards
+- Dashboard — role-aware (candidate / company / admin — 3 separate views)
+- ProblemDetail — 3-panel layout (description | code+tests | AristoBot), `<textarea>` for code, Tab key inserts 4 spaces, mocked AI replies, language selector with per-problem starter code
+- Settings page — display name, email, theme, email notifications; theme persists and syncs with Navbar
+- Add Problem / Edit Problem pages (admin + company)
+- Users Management page (admin: CRUD with modal + inline delete confirm, last-admin protection)
+- Backend: `/api` prefix, auth routes, `/api/users/me`, settings model
+- Role-based problem visibility (candidate sees public only, company sees own+public, admin sees all)
+- `PageLoader` spinner component used throughout
+- 🤖 emoji favicon and browser tab title
 
 **Deliberately deferred to Phase 2:**
 - Monaco editor (use `<textarea>` now)
 - Piston live code execution (no Run button yet)
-- Role-aware dashboard (one view for everyone)
 - Progress page
-- Users management page (admin)
-- Three-panel layout (two panels for now)
 - SSE streaming for AristoBot
+- MySQL / real auth
 
 ### Phase 2 — Full Product (after submission)
 
@@ -56,10 +65,7 @@ Each feature is **additive** — nothing from Phase 1 gets rewritten, only exten
 |---|---|
 | Monaco editor | `<textarea>` in ProblemDetail |
 | Piston live execution | Add Run button + Output tab |
-| Role-aware dashboard | Add role check to existing Dashboard |
 | Progress page | New page, `/api/progress` already exists |
-| Users management (admin CRUD) | New page, `/api/users` already exists |
-| Three-panel layout | Expand ProblemDetail from 2 → 3 panels |
 | SSE streaming AristoBot | Replace mocked replies in ProblemDetail |
 | MySQL / real auth | Backend swap, frontend unchanged |
 
@@ -73,22 +79,51 @@ The codebase follows a strict three-layer separation:
 - **controllers/** — All request/response logic. Reads `req`, calls model helpers, returns the standard response envelope.
 - **models/** — In-memory arrays + CRUD helper functions. No Express objects here.
 
-**server.js** wires middleware globally (`logger`, `express.json()`) and mounts all routers.
+**server.js** wires middleware globally (`logger`, `express.json()`, CORS for `http://localhost:5173`) and mounts all routers under `/api`.
+
+### Frontend structure
+
+```
+client/src/
+├── App.js                 ← React Router v7, RequireAuth/RequireRole guards
+├── index.css              ← CSS custom properties for dark + light theme
+├── services/
+│   ├── api.js             ← fetch wrapper, auto-attaches x-user-role + x-user-id
+│   ├── auth.js            ← login (fetches settings + applies theme), logout, getMe
+│   ├── problems.js        ← listProblems, getProblem, createProblem, updateProblem, deleteProblem
+│   ├── conversations.js
+│   ├── messages.js
+│   └── settings.js
+├── components/
+│   ├── Navbar.jsx         ← theme toggle (localStorage + data-theme), 🤖 brand
+│   ├── PageLoader.jsx     ← spinner used for all async operations
+│   ├── RequireRole.jsx    ← redirects if user's role not in allowed list
+│   └── …
+└── pages/
+    ├── Dashboard.jsx      ← CandidateDashboard / CompanyDashboard / AdminDashboard
+    ├── ProblemDetail.jsx  ← 3-panel layout, mocked AristoBot, starter code
+    ├── AddProblem.jsx     ← create problem form (admin + company)
+    ├── EditProblem.jsx    ← edit problem form (admin + company)
+    ├── UsersPage.jsx      ← admin CRUD + modal + last-admin guard
+    └── Settings.jsx       ← theme radio syncs with Navbar
+```
 
 ### Auth middleware pattern
 
-`auth.js` exports a factory: `auth(['admin', 'company'])` returns an Express middleware that reads `x-user-role` from the request header and returns 403 if the role isn't in the allowed list. Apply it per-route in routes files.
+`auth.js` exports a factory: `auth(['admin', 'company'])` returns an Express middleware that reads `x-user-role` from the request header and returns 403 if the role isn't in the allowed list.
 
-"Own" access (e.g. a candidate reading their own record) must be checked inside the controller by comparing the resource's `userId` to a user identifier from the header — there is no real session, so use a convention like `x-user-id`.
+"Own" access is checked inside the controller by comparing the resource's `userId` to `x-user-id`.
+
+### Theme system
+
+- CSS custom properties under `[data-theme="dark"]` (default) and `[data-theme="light"]`
+- `data-theme` attribute lives on `<html>`
+- Touch points: login (from API settings), Navbar toggle (live), Settings save (persist)
+- `localStorage` key: `aristosolve_theme`
 
 ### Model layer pattern
 
-Each model file exports:
-- The in-memory array (e.g. `users`)
-- A `nextId` counter or equivalent auto-increment logic
-- Helper functions: `findAll`, `findById`, `create`, `update`, `remove`
-
-IDs are numeric, auto-incremented. Data resets on server restart.
+Each model file exports the in-memory array, a `nextId` counter, and helpers: `findAll`, `findById`, `create`, `update`, `remove`. IDs are numeric auto-incremented. Data resets on server restart.
 
 ---
 
@@ -118,10 +153,10 @@ Every endpoint must return this shape:
 | Role      | Permissions |
 |-----------|-------------|
 | admin     | Full CRUD on all resources |
-| company   | Create/update problems; view evaluations of their candidates |
-| candidate | Read problems; own conversations, progress, evaluations |
+| company   | Create/update/delete own problems; view evaluations of their candidates |
+| candidate | Read problems (public only); own conversations, progress, evaluations |
 
-Auth is simulated via the `x-user-role` request header.
+Auth is simulated via the `x-user-role` request header. Frontend attaches it automatically from localStorage.
 
 ---
 
@@ -136,36 +171,58 @@ Auth is simulated via the `x-user-role` request header.
 ```json
 { "id": 1, "title": "", "difficulty": "easy|medium|hard", "topic": "arrays|trees|graphs|dp|strings|...", "type": "algorithm|system-design|debugging", "description": "", "constraints": "", "examples": [], "testCases": [{ "label": "", "stdin": "", "expected": "" }], "starterCode": { "python": "", "javascript": "", "java": "" }, "evalPrompt": "", "isPublic": true, "createdBy": 1, "createdAt": "" }
 ```
-`isPublic: true` = open self-learning problem. `isPublic: false` = private company recruitment test.
-`GET /problems` supports query params: `?difficulty=easy&topic=arrays&type=algorithm`
 
-`testCases` — each entry has `stdin` (passed to the program via stdin) and `expected` (expected stdout, trimmed). Used by the frontend to run live code execution via the Piston API.
+### conversations / messages / evaluations / progress
+See original data model definitions — unchanged from Assignment 2.
 
-`starterCode` — per-language starter template that includes the I/O harness. The user fills in the solution function body. The harness reads stdin and prints the result so test cases can be compared automatically.
-
-### conversations
+### settings
 ```json
-{ "id": 1, "userId": 1, "problemId": 1, "language": "python|java|javascript", "startedAt": "", "endedAt": null }
+{ "userId": 1, "displayName": "", "email": "", "theme": "dark|light", "emailNotifications": true }
 ```
-`GET /conversations/:id` returns the conversation **with its messages** embedded.
 
-### messages
-```json
-{ "id": 1, "conversationId": 1, "sequenceNumber": 1, "role": "user|assistant", "content": "", "createdAt": "" }
-```
-`sequenceNumber` is auto-assigned per conversation on create.
+---
 
-### evaluations
-```json
-{ "id": 1, "userId": 1, "problemId": 1, "conversationId": 1, "companyId": 2, "score": 85, "feedback": "", "thinkingAnalysis": "", "createdAt": "" }
-```
-`companyId` is derived from `problem.createdBy` on create — not passed by the client.
+## API Routes
 
-### progress
-```json
-{ "id": 1, "userId": 1, "problemId": 1, "status": "in_progress|completed", "attempts": 2, "lastAttemptAt": "", "deadline": null }
-```
-`deadline` is optional. Set by company when assigning a test; `null` for self-learning.
+All routes are under `/api`. Key access rules:
+
+### Users
+| Method | Path          | Access              |
+|--------|---------------|---------------------|
+| GET    | /users        | admin, company      |
+| GET    | /users/me     | own (x-user-id)     |
+| GET    | /users/:id    | admin, own          |
+| POST   | /users        | public              |
+| PUT    | /users/:id    | admin, own          |
+| DELETE | /users/:id    | admin               |
+
+### Problems
+| Method | Path          | Access                                |
+|--------|---------------|---------------------------------------|
+| GET    | /problems     | all (filtered by role)                |
+| GET    | /problems/:id | all (403 if candidate + private)      |
+| POST   | /problems     | admin, company                        |
+| PUT    | /problems/:id | admin; company (own only)             |
+| DELETE | /problems/:id | admin; company (own only)             |
+
+### Auth
+| Method | Path         | Access |
+|--------|--------------|--------|
+| POST   | /auth/login  | public |
+| POST   | /auth/logout | public |
+
+### Settings
+| Method | Path      | Access |
+|--------|-----------|--------|
+| GET    | /settings | own    |
+| PUT    | /settings | own    |
+
+### Conversations / Messages / Evaluations / Progress
+- Conversations POST: admin, candidate
+- Conversations PUT: admin, candidate (endedAt)
+- Messages POST: admin, candidate (own conv)
+- Progress POST: admin, candidate (own)
+- Evaluations POST: admin only
 
 ---
 
@@ -180,71 +237,25 @@ POST and PUT must validate:
 - `language` (conversation): `python | java | javascript`
 - Route `:id` params must be numeric
 
+Special rules:
+- Cannot delete the last admin account (`adminCount <= 1`)
+- Company can only edit/delete their own problems (`problem.createdBy === x-user-id`)
+- Candidate cannot access private problems (`isPublic: false`)
+
 ---
 
-## Mock Data
+## Mock Data (seed users)
 
-Each model needs 3–5 seed records. Mock users must cover all three roles.
-
----
-
-## API Endpoints
-
-### Users
-| Method | Path       | Access     |
-|--------|------------|------------|
-| GET    | /users     | admin      |
-| GET    | /users/:id | admin, own |
-| POST   | /users     | public     |
-| PUT    | /users/:id | admin, own |
-| DELETE | /users/:id | admin      |
-
-### Problems
-| Method | Path          | Access         |
-|--------|---------------|----------------|
-| GET    | /problems     | all            |
-| GET    | /problems/:id | all            |
-| POST   | /problems     | admin, company |
-| PUT    | /problems/:id | admin, company |
-| DELETE | /problems/:id | admin          |
-
-### Conversations
-| Method | Path               | Access     |
-|--------|--------------------|------------|
-| GET    | /conversations     | admin      |
-| GET    | /conversations/:id | admin, own |
-| POST   | /conversations     | candidate  |
-| PUT    | /conversations/:id | admin      |
-| DELETE | /conversations/:id | admin      |
-
-### Messages (nested under conversations)
-| Method | Path                                | Access     |
-|--------|-------------------------------------|------------|
-| GET    | /conversations/:id/messages         | admin, own |
-| POST   | /conversations/:id/messages         | candidate  |
-| PUT    | /conversations/:id/messages/:msgId  | admin      |
-| DELETE | /conversations/:id/messages/:msgId  | admin      |
-
-### Evaluations
-| Method | Path             | Access              |
-|--------|------------------|---------------------|
-| GET    | /evaluations     | admin, company      |
-| GET    | /evaluations/:id | admin, company, own |
-| POST   | /evaluations     | admin               |
-| PUT    | /evaluations/:id | admin               |
-| DELETE | /evaluations/:id | admin               |
-
-### Progress
-| Method | Path          | Access     |
-|--------|---------------|------------|
-| GET    | /progress     | admin      |
-| GET    | /progress/:id | admin, own |
-| POST   | /progress     | candidate  |
-| PUT    | /progress/:id | admin, own |
-| DELETE | /progress/:id | admin      |
+| userId | Name | Email | Password | Role |
+|--------|------|-------|----------|------|
+| 1 | Alice Admin | alice@example.com | admin123 | admin |
+| 2 | Bob Builder | bob@example.com | company123 | company |
+| 3 | Carol Chen | carol@example.com | candidate123 | candidate |
+| 4 | Dave Dev | dave@example.com | candidate123 | candidate |
+| 5 | Eva Evans | eva@example.com | candidate123 | candidate |
 
 ---
 
 ## Out of Scope (this assignment)
 
-Real AI chat, MySQL, JWT/password auth, file uploads, WebSockets.
+Real AI chat, MySQL, JWT/password auth, file uploads, WebSockets, Monaco editor, Piston execution, Progress page.

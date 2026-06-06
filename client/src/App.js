@@ -7,6 +7,8 @@ import Dashboard from './pages/Dashboard';
 import ProblemDetail from './pages/ProblemDetail';
 import Settings from './pages/Settings';
 import UsersPage from './pages/UsersPage';
+import AddProblem from './pages/AddProblem';
+import EditProblem from './pages/EditProblem';
 
 export default function App() {
   return (
@@ -21,6 +23,8 @@ export default function App() {
         <Route path="/problems/:id" element={<RequireAuth><ProblemDetail /></RequireAuth>} />
         <Route path="/settings"     element={<RequireAuth><Settings /></RequireAuth>} />
         <Route path="/users"        element={<RequireRole roles={['admin']}><UsersPage /></RequireRole>} />
+        <Route path="/problems/new"      element={<RequireRole roles={['admin', 'company']}><AddProblem /></RequireRole>} />
+        <Route path="/problems/:id/edit" element={<RequireRole roles={['admin', 'company']}><EditProblem /></RequireRole>} />
 
         {/* Default */}
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
