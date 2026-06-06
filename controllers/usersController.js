@@ -13,6 +13,16 @@ const getAll = (req, res) => {
   ok(res, users.findAll());
 };
 
+const getMe = (req, res) => {
+  const requesterId = parseInt(req.headers['x-user-id']);
+  if (isNaN(requesterId)) return fail(res, 400, 'VALIDATION_ERROR', 'x-user-id header is required');
+
+  const user = users.findById(requesterId);
+  if (!user) return fail(res, 404, 'NOT_FOUND', `User ${requesterId} not found`);
+  const { password, ...safe } = user;
+  ok(res, safe);
+};
+
 const getById = (req, res) => {
   const id = parseInt(req.params.id);
   if (isNaN(id)) return fail(res, 400, 'VALIDATION_ERROR', 'ID must be numeric');
@@ -42,7 +52,7 @@ const create = (req, res) => {
     return fail(res, 400, 'VALIDATION_ERROR', `level must be one of: ${VALID_LEVELS.join(', ')}`);
   }
 
-  const user = users.create({ firstName, lastName, email, userRole, level: level || 'beginner' });
+  const user = users.create({ firstName, lastName, email, password, userRole, level: level || 'beginner' });
   ok(res, user, 201);
 };
 
@@ -79,4 +89,4 @@ const remove = (req, res) => {
   ok(res, { message: `User ${id} deleted` });
 };
 
-module.exports = { getAll, getById, create, update, remove };
+module.exports = { getAll, getMe, getById, create, update, remove };

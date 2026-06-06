@@ -33,8 +33,9 @@ const create = (req, res) => {
   const conversation = getConversationOr404(req, res);
   if (!conversation) return;
 
+  const userRole = req.headers['x-user-role'];
   const requesterId = parseInt(req.headers['x-user-id']);
-  if (requesterId !== conversation.userId)
+  if (userRole !== 'admin' && requesterId !== conversation.userId)
     return fail(res, 403, 'FORBIDDEN', 'Access denied');
 
   const { role, content } = req.body;

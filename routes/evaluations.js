@@ -4,7 +4,7 @@ const auth = require('../middleware/auth');
 const ctrl = require('../controllers/evaluationsController');
 
 router.get('/', auth(['admin', 'company']), ctrl.getAll);
-router.get('/:id', ctrl.getById);
+router.get('/:id', auth(['admin', 'company', 'candidate']), ctrl.getById);
 router.post('/', auth(['admin']), ctrl.create);
 router.put('/:id', auth(['admin']), ctrl.update);
 router.delete('/:id', auth(['admin']), ctrl.remove);
