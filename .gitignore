@@ -1,6 +1,7 @@
 # Dependencies
 node_modules/
-client/node_modules/
+backend/node_modules/
+frontend/node_modules/
 
 # Logs
 *.log
@@ -10,7 +11,8 @@ yarn-error.log*
 
 # Build output
 /build
-client/build/
+backend/build/
+frontend/build/
 
 # Test coverage
 /coverage
@@ -19,6 +21,8 @@ client/build/
 .env
 .env.local
 .env.*.local
+backend/.env
+backend/.env.local
 
 # OS files (OneDrive / Windows / macOS)
 Thumbs.db
