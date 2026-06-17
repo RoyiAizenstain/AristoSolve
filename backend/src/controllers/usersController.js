@@ -1,4 +1,4 @@
-const users = require('../models/users');
+const users = require('../../models/legacy/users');
 
 const VALID_ROLES = ['admin', 'company', 'candidate'];
 const VALID_LEVELS = ['beginner', 'intermediate', 'advanced'];

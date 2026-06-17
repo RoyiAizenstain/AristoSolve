@@ -1,4 +1,4 @@
-const settings = require('../models/settings');
+const settings = require('../../models/legacy/settings');
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const VALID_THEMES = ['light', 'dark'];

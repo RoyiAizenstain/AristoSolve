@@ -1,5 +1,5 @@
-const messages = require('../models/messages');
-const conversations = require('../models/conversations');
+const messages = require('../../models/legacy/messages');
+const conversations = require('../../models/legacy/conversations');
 
 const VALID_ROLES = ['user', 'assistant'];
 

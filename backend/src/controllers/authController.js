@@ -1,4 +1,4 @@
-const users = require('../models/users');
+const users = require('../../models/legacy/users');
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 

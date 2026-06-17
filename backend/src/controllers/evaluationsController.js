@@ -1,5 +1,5 @@
-const evaluations = require('../models/evaluations');
-const problems = require('../models/problems');
+const evaluations = require('../../models/legacy/evaluations');
+const problems = require('../../models/legacy/problems');
 
 const ok = (res, data, status = 200) =>
   res.status(status).json({ success: true, data, error: null });

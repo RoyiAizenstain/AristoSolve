@@ -1,4 +1,4 @@
-const progress = require('../models/progress');
+const progress = require('../../models/legacy/progress');
 
 const VALID_STATUSES = ['in_progress', 'completed'];
 

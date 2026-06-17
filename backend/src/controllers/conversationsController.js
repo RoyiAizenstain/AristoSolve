@@ -1,5 +1,5 @@
-const conversations = require('../models/conversations');
-const messages = require('../models/messages');
+const conversations = require('../../models/legacy/conversations');
+const messages = require('../../models/legacy/messages');
 
 const VALID_LANGUAGES = ['python', 'java', 'javascript'];
 

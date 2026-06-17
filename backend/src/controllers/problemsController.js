@@ -1,4 +1,4 @@
-const problems = require('../models/problems');
+const problems = require('../../models/legacy/problems');
 
 const VALID_DIFFICULTIES = ['easy', 'medium', 'hard'];
 const VALID_TYPES = ['algorithm', 'system-design', 'debugging'];

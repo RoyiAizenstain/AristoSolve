@@ -4,13 +4,24 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Commands
 
+### Phase 1 (current structure)
 ```bash
 # Backend (port 3000)
-npm start        # Run server (node server.js)
-npm run dev      # Run with nodemon (auto-restart on file changes)
+npm start
+npm run dev
 
 # Frontend (port 5173)
 cd client && npm start
+```
+
+### Phase 2 (after folder restructure — Assignment 4)
+```bash
+# Backend (port 3000)
+cd backend && npm start
+cd backend && npm run dev
+
+# Frontend (port 5173)
+cd frontend && npm start
 ```
 
 No test runner is configured. Test endpoints manually using the Postman collection at [docs/AristoSolve.postman_collection.json](docs/AristoSolve.postman_collection.json), or with curl passing `-H "x-user-role: admin" -H "x-user-id: 1"`.
@@ -19,7 +30,13 @@ No test runner is configured. Test endpoints manually using the Postman collecti
 
 ## What This Is
 
-AristoSolve is a full-stack AI-guided problem-solving platform (think NeetCode). Users write code in a built-in editor and simultaneously chat with an AI mentor (AristoBot) that guides their thinking without giving answers directly.
+AristoSolve is a full-stack AI-guided problem-solving platform with a single core goal: **evaluate whether a candidate is AI native**.
+
+Traditional technical interviews test whether someone can write an algorithm from memory. AristoSolve tests something different — can this person *think alongside AI*? Do they know what questions to ask? Can they push back when the AI is wrong? Do they use AI as a thinking tool or as an answer machine?
+
+**How it works:** Candidates solve coding problems while chatting with AristoBot, an AI mentor that guides their thinking without giving answers directly. The entire conversation is saved. At the end, Claude evaluates the conversation using the company's custom evaluation prompt — scoring not just code correctness, but AI interaction quality: prompting skill, critical thinking, and adaptability.
+
+**What makes it different from LeetCode/NeetCode:** The conversation IS the evaluation artifact. Companies define what "AI native" means for their context via a custom eval prompt. The score reflects how a candidate thinks, not just what they output.
 
 - Runtime: Node.js + Express (backend) + Create React App (frontend, NOT Vite)
 - Backend port: 3000 — Base URL: `http://localhost:3000`
@@ -57,17 +74,174 @@ All Phase 1 items are implemented and working.
 - SSE streaming for AristoBot
 - MySQL / real auth
 
-### Phase 2 — Full Product (after submission)
+### Phase 2 — Assignment 4 (next)
 
 Each feature is **additive** — nothing from Phase 1 gets rewritten, only extended.
 
-| Feature | Replaces / Extends |
+**Always check which phase is active before adding any feature.**
+
+#### Step 0 — Folder Restructure (A4 Required Structure) `~30 min`
+
+Assignment 4 requires a specific folder structure. Do this **before any Phase 2 code**.
+
+**Target structure:**
+```
+AristoSolve/
+├── frontend/              ← renamed from client/
+│   ├── public/
+│   ├── src/
+│   └── package.json
+├── backend/
+│   ├── src/
+│   │   ├── server.js      ← moved from root
+│   │   ├── controllers/   ← moved from root
+│   │   ├── middleware/    ← moved from root
+│   │   └── routes/        ← moved from root
+│   ├── models/            ← Sequelize ORM models (replaces root models/)
+│   ├── migrations/        ← new
+│   ├── seeders/           ← new
+│   └── package.json       ← moved from root
+├── CLAUDE.md
+├── Context/
+└── docs/
+```
+
+**Steps:**
+1. ✅ Rename `client/` → `frontend/`
+2. ✅ Create `backend/src/`, `backend/models/`, `backend/migrations/`, `backend/seeders/`
+3. ✅ Move `controllers/`, `middleware/`, `routes/`, `server.js` → `backend/src/`
+4. ✅ Move root `package.json` + `node_modules/` → `backend/`
+5. ✅ Update all `require()` paths in `server.js` and controllers (one level deeper)
+6. ✅ Update `backend/package.json` scripts → `node src/server.js`
+7. ✅ Verify frontend proxy unchanged + both servers tested from new locations
+
+**New commands after restructure:**
+```bash
+# Backend
+cd backend && npm start
+cd backend && npm run dev
+
+# Frontend
+cd frontend && npm start
+```
+
+---
+
+#### Part 1 — MySQL + Sequelize (30% of A4 grade)
+
+Goal: replace all in-memory arrays with a real MySQL database so data persists after server restarts.
+
+| Step | Task |
 |---|---|
-| Monaco editor | `<textarea>` in ProblemDetail |
+| 1 | Install `sequelize`, `mysql2`, `sequelize-cli` |
+| 2 | Create `.env` — `DB_HOST`, `DB_USER`, `DB_PASS`, `DB_NAME` |
+| 3 | Write Sequelize models: User, Problem, Conversation, Message, Progress, Evaluation, Settings |
+| 4 | Write migrations in `backend/migrations/` — one file per table |
+| 5 | Write seeders — 5 users + 5 problems |
+| 6 | Swap all controllers from in-memory helpers → Sequelize queries |
+| 7 | Add at least one JOIN query (Progress + User + Problem for company dashboard) |
+
+Required ORM relationships (A4 requires one-to-many AND many-to-many):
+- one-to-many: `User` → `Conversations`, `User` → `Progress`
+- many-to-many: `User` ↔ `Problem` via `Progress` (junction table)
+
+#### Part 2 — Socket.IO — AristoBot Chat (30% of A4 grade)
+
+Goal: replace mocked AristoBot replies with real-time Socket.IO communication so the chat feels live.
+
+| Step | Task |
+|---|---|
+| 1 | Install `socket.io` (backend) + `socket.io-client` (frontend) |
+| 2 | Wire Socket.IO to Express server in `server.js` |
+| 3 | Backend: implement 5 custom socket events |
+| 4 | Frontend: replace mocked replies in `ProblemDetail.jsx` with socket flow |
+| 5 | Show "AristoBot is thinking..." typing indicator while AI processes |
+| 6 | Demo: 2 browser tabs on same conversation, messages sync live |
+
+5 custom events (A4 requires minimum 3):
+
+| Event | Direction | When |
+|---|---|---|
+| `join-conversation` | client → server | Candidate opens ProblemDetail |
+| `send-message` | client → server | Candidate sends chat message |
+| `typing` | server → client | While Claude API is processing |
+| `receive-message` | server → client | Claude reply is ready |
+| `conversation-ended` | client → server | Candidate clicks Submit |
+
+#### Part 3 — Claude AI Integration (20% of A4 grade)
+
+Goal: implement the two AI features that make AristoSolve unique — a real Socratic mentor and an AI nativeness evaluator.
+
+| Step | Task |
+|---|---|
+| 1 | Install `@anthropic-ai/sdk` |
+| 2 | Add `ANTHROPIC_API_KEY` to `.env` — never exposed to frontend |
+| 3 | AristoBot mentor: backend calls Claude after each `send-message` socket event |
+| 4 | Evaluation: `POST /api/evaluations` calls Claude with full conversation + `evalPrompt` |
+
+**AristoBot system prompt:**
+```
+You are AristoBot, an AI mentor for a coding interview platform.
+Your job is to evaluate whether this candidate is AI native.
+Guide their thinking without giving the answer directly.
+Ask Socratic questions. Never reveal the solution.
+Keep replies under 3 sentences.
+```
+
+**Evaluation system prompt:**
+```
+You are evaluating a technical interview on an AI-guided coding platform.
+Score the candidate's AI nativeness — their ability to think alongside AI.
+
+Score these dimensions (0-100 each):
+- Prompting skill: did they ask clear, focused questions?
+- Critical thinking: did they push back when the AI was wrong or led them astray?
+- Adaptability: did they recover and redirect when they went down wrong paths?
+- Code correctness: was the final solution correct and well-reasoned?
+
+Company evaluation focus: {evalPrompt}
+
+Return JSON: { score, feedback, thinkingAnalysis, dimensions: { prompting, criticalThinking, adaptability, codeCorrectness } }
+```
+
+#### Part 4 — Documentation (10% of A4 grade)
+
+| Item | Content |
+|---|---|
+| `README.md` | Purpose, install, DB setup, env vars, ORM setup, API endpoints, WebSocket feature, AI feature, known limitations |
+| `.env.example` | All required keys, no real values |
+| Screenshots | DB tables, CRUD op, ORM relationship, 2 Socket.IO tabs, AI input/output, migrations |
+| Demo video | Required for submission |
+
+#### Part 1b — Test Assignment Feature (Part of MySQL phase)
+
+Goal: allow a company to assign a specific problem to a specific candidate with a deadline.
+
+**How it works:** A `progress` record = an assignment. Company creates a progress record for a candidate with a deadline. Candidate sees assigned tests separately on their dashboard.
+
+Backend changes:
+- `POST /api/progress` — extend to allow company/admin to create for a specific `userId` (candidate) with `deadline`
+- `GET /api/progress` — candidate sees their assignments; company sees their candidates' progress
+
+Frontend — Company Dashboard:
+- "Assign" button per problem row → modal: select candidate + set deadline → creates progress record
+
+Frontend — Candidate Dashboard:
+- New "Assigned to me" section above open repository — shows problem, company name, deadline, status, Start button
+- Open repository stays below as separate section
+
+---
+
+#### Good to Have — After A4 Submitted
+
+| Feature | Extends |
+|---|---|
+| Monaco editor | Replace `<textarea>` in ProblemDetail |
 | Piston live execution | Add Run button + Output tab |
 | Progress page | New page, `/api/progress` already exists |
-| SSE streaming AristoBot | Replace mocked replies in ProblemDetail |
-| MySQL / real auth | Backend swap, frontend unchanged |
+| Evaluation report page | Candidate sees their AI nativeness score |
+| JWT real auth | Replace header-based mock auth |
+| Folder restructure | `frontend/` + `backend/` per A4 spec |
 
 ---
 
@@ -256,6 +430,7 @@ Special rules:
 
 ---
 
-## Out of Scope (this assignment)
+## Out of Scope (Phase 1 — now complete)
 
-Real AI chat, MySQL, JWT/password auth, file uploads, WebSockets, Monaco editor, Piston execution, Progress page.
+The following were out of scope for Assignment 3 and are now targets for Phase 2 (Assignment 4):
+MySQL, real AI chat (Claude API), Socket.IO, JWT/password auth, Monaco editor, Piston live execution, Progress page, evaluation report page.
