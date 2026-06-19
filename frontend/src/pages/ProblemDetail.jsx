@@ -5,6 +5,7 @@ import DifficultyPill from '../components/DifficultyPill';
 import { getProblem } from '../services/problems';
 import { createConversation, endConversation } from '../services/conversations';
 import { sendMessage } from '../services/messages';
+import { get, put, getStoredUser } from '../services/api';
 
 const LANGUAGES = ['python', 'javascript', 'java'];
 
@@ -124,6 +125,17 @@ export default function ProblemDetail() {
     try {
       await sendMessage(convId, 'user', `[Final submission]\n\`\`\`${language}\n${code}\n\`\`\``);
       await endConversation(convId);
+      // Mark progress as completed if a record exists for this user+problem
+      const user = getStoredUser();
+      if (user) {
+        const allProgress = await get('/progress').catch(() => []);
+        const record = Array.isArray(allProgress)
+          ? allProgress.find(p => (p.problemId || p.Problem?.id) === parseInt(id) && p.userId === user.userId)
+          : null;
+        if (record) {
+          await put(`/progress/${record.id}`, { status: 'completed' }).catch(() => {});
+        }
+      }
     } catch { /* best-effort */ }
     navigate('/dashboard');
   }

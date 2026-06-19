@@ -238,7 +238,7 @@ Return JSON: { score, feedback, thinkingAnalysis, dimensions: { prompting, criti
 | Screenshots | DB tables, CRUD op, ORM relationship, 2 Socket.IO tabs, AI input/output, migrations |
 | Demo video | Required for submission |
 
-#### Part 1b — Test Assignment Feature (Part of MySQL phase)
+#### Part 1b — Test Assignment Feature (Part of MySQL phase) ✅
 
 Goal: allow a company to assign a specific problem to a specific candidate with a deadline.
 
@@ -266,6 +266,36 @@ Frontend — Candidate Dashboard:
 | Progress page | New page, `/api/progress` already exists |
 | Evaluation report page | Candidate sees their AI nativeness score |
 | JWT real auth | Replace header-based mock auth |
+| **Timed multi-question test assignment** | See design below |
+
+##### Timed Test Assignment (future feature)
+
+Company assigns a **test session** instead of a single problem. Candidate does not know the questions in advance.
+
+New `test_assignments` table:
+```json
+{
+  "id": 1,
+  "candidateId": 3,
+  "companyId": 2,
+  "problemIds": "[1, 4, 2]",
+  "totalQuestions": 3,
+  "timeLimitMinutes": 20,
+  "deadline": "2026-07-01",
+  "status": "pending | in_progress | completed",
+  "currentQuestionIndex": 0,
+  "startedAt": null,
+  "completedAt": null
+}
+```
+
+Flow:
+1. Company selects candidate + number of questions + time per question + deadline
+2. Backend randomly picks `totalQuestions` problems from company pool at test start (not at assignment time)
+3. Candidate sees "3 questions · 20 min each · Deadline Jul 1" — no problem titles
+4. Start Test → question 1 revealed → timer starts
+5. Submit → question 2 revealed → timer resets
+6. After all questions → evaluation triggered automatically
 
 ---
 

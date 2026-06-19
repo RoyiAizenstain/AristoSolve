@@ -49,7 +49,12 @@ const create = async (req, res) => {
   // candidates can only create for themselves; company/admin can assign to any candidate
   if (role === 'candidate' && userId !== requesterId) return fail(res, 403, 'FORBIDDEN', 'Candidates can only create progress for themselves');
   try {
-    const record = await Progress.create({ userId, problemId, status, attempts: 1, deadline: deadline || null });
+    const existing = await Progress.findOne({ where: { userId, problemId } });
+    if (existing) {
+      await existing.update({ status, deadline: deadline || null, lastAttemptAt: new Date() });
+      return ok(res, existing);
+    }
+    const record = await Progress.create({ userId, problemId, status, attempts: 1, lastAttemptAt: new Date(), deadline: deadline || null });
     ok(res, record, 201);
   } catch (e) { fail(res, 500, 'INTERNAL_ERROR', e.message); }
 };
@@ -78,7 +83,10 @@ const remove = async (req, res) => {
     if (!record) return fail(res, 404, 'NOT_FOUND', `Progress ${id} not found`);
     await record.destroy();
     ok(res, { message: `Progress ${id} deleted` });
-  } catch (e) { fail(res, 500, 'INTERNAL_ERROR', e.message); }
+  } catch (e) {
+    const details = e.errors ? e.errors.map(err => `${err.path}: ${err.message}`).join(', ') : '';
+    fail(res, 500, 'INTERNAL_ERROR', `${e.message}${details ? ' — ' + details : ''}`);
+  }
 };
 
 module.exports = { getAll, getById, create, update, remove };

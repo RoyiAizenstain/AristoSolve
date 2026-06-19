@@ -890,6 +890,47 @@ textarea.input { height: auto; padding: 10px 12px; resize: vertical; }
   border-top: 1px solid var(--border);
 }
 
+.modal-body { display: flex; flex-direction: column; gap: 16px; }
+
+.modal-close {
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: var(--text-lg);
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: color 0.15s;
+}
+.modal-close:hover { color: var(--text); }
+
+.form-group { display: flex; flex-direction: column; gap: 6px; }
+
+.form-label {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--muted);
+}
+
+.form-input {
+  width: 100%;
+  padding: 10px 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-input);
+  color: var(--text);
+  font-size: var(--text-base);
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s;
+  box-sizing: border-box;
+  appearance: auto;
+  -webkit-appearance: auto;
+  color-scheme: dark;
+}
+.form-input:focus { border-color: var(--accent); }
+.form-input option { background: var(--surface-2); color: var(--text); }
+
 /* ============================================================
    Auth pages — Login, Register (no Navbar/Footer)
    ============================================================ */

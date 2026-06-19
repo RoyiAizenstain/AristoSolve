@@ -1,4 +1,4 @@
-const { Conversation, Message } = require('../../models/index');
+const { Conversation, Message, Problem, Evaluation } = require('../../models/index');
 
 const VALID_LANGUAGES = ['python', 'java', 'javascript'];
 
@@ -42,7 +42,27 @@ const update = async (req, res) => {
   try {
     const conversation = await Conversation.findByPk(id);
     if (!conversation) return fail(res, 404, 'NOT_FOUND', `Conversation ${id} not found`);
+    const wasAlreadyEnded = !!conversation.endedAt;
     await conversation.update(req.body);
+
+    // Auto-create placeholder evaluation when conversation ends for the first time
+    if (req.body.endedAt && !wasAlreadyEnded) {
+      const problem = await Problem.findByPk(conversation.problemId);
+      const existing = await Evaluation.findOne({ where: { conversationId: id } });
+      if (!existing && problem) {
+        await Evaluation.create({
+          userId:           conversation.userId,
+          problemId:        conversation.problemId,
+          conversationId:   id,
+          companyId:        problem.createdBy,
+          score:            null,
+          feedback:         'Pending AI evaluation',
+          thinkingAnalysis: 'AI evaluation will be generated here in Phase 2.',
+          dimensions:       null,
+        });
+      }
+    }
+
     ok(res, conversation);
   } catch (e) { fail(res, 500, 'INTERNAL_ERROR', e.message); }
 };

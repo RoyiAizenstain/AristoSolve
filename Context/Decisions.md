@@ -63,3 +63,25 @@ Both layers are needed — middleware can't know resource ownership without a DB
 
 **`feature/frontend-phase1` branch merged into `master` after Phase 1 completion.**
 Master now contains the full Phase 1 codebase. Phase 2 work should branch off master again.
+
+---
+
+## Database (Phase 2)
+
+**MySQL, not SQLite or PostgreSQL**
+Assignment 4 explicitly requires MySQL. No alternative considered.
+
+**Sequelize, not Prisma**
+Both are strong ORMs. Sequelize chosen because it is the most common Node.js ORM in university courses, has better-documented migration CLI (`sequelize-cli`), and the team has no prior Prisma experience. Prisma's type-safety advantage is not meaningful without TypeScript.
+
+**Admin is a User with userRole='admin', not a separate table**
+Assignment 4 lists "Admin" as a required model. In AristoSolve, Admin is not a separate entity — it is a `User` record where `userRole = 'admin'`. The `User` Sequelize model covers this requirement. The last-admin protection logic in the delete controller demonstrates admin-specific business rules.
+
+**MySQL installed via winget on Windows 11**
+`winget install MySQL.MySQL` and `winget install MySQL.MySQLWorkbench`. Workbench provides the visual GUI needed for A4 screenshots (DB tables, migrations, ORM relationships).
+
+**In-memory models kept in `backend/models/legacy/`**
+Not deleted — kept as reference while Sequelize models are built. Removed after all controllers are swapped and verified.
+
+**`backend/.env` for all secrets**
+DB credentials and `ANTHROPIC_API_KEY` live in `backend/.env`. Never committed — listed in `.gitignore`. A `backend/.env.example` with placeholder values is committed for A4 submission.

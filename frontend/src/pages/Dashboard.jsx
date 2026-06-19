@@ -5,7 +5,7 @@ import StatCard from '../components/StatCard';
 import ProblemsTable from '../components/ProblemsTable';
 import PageLoader from '../components/PageLoader';
 import { listProblems, deleteProblem } from '../services/problems';
-import { get, getStoredUser } from '../services/api';
+import { get, post, getStoredUser } from '../services/api';
 
 const STAT_CARDS = [
   { icon: '🤖', title: 'AI-Guided, Not AI-Solved',         description: 'Nudges your thinking without giving answers.' },
@@ -14,14 +14,79 @@ const STAT_CARDS = [
 ];
 
 /* ------------------------------------------------------------------ */
+/* Assign Modal (company)                                               */
+/* ------------------------------------------------------------------ */
+function AssignModal({ problem, candidates, onClose, onAssigned }) {
+  const [candidateId, setCandidateId] = useState('');
+  const [deadline,    setDeadline]    = useState('');
+  const [saving,      setSaving]      = useState(false);
+  const [error,       setError]       = useState('');
+
+  const submit = async () => {
+    if (!candidateId) return setError('Please select a candidate');
+    setSaving(true);
+    setError('');
+    try {
+      await post('/progress', {
+        userId:    parseInt(candidateId),
+        problemId: problem.id,
+        status:    'in_progress',
+        deadline:  deadline || null,
+      });
+      onAssigned();
+      onClose();
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="modal-backdrop" onClick={onClose}>
+      <div className="modal" onClick={e => e.stopPropagation()}>
+        <div className="modal-header">
+          <h2 className="modal-title">Assign: {problem.title}</h2>
+          <button className="modal-close" onClick={onClose}>✕</button>
+        </div>
+        <div className="modal-body">
+          <div className="form-group">
+            <label className="form-label">Select candidate</label>
+            <select className="form-input" value={candidateId} onChange={e => setCandidateId(e.target.value)}>
+              <option value="">— choose a candidate —</option>
+              {candidates.map(c => (
+                <option key={c.userId} value={c.userId}>{c.firstName} {c.lastName} ({c.email})</option>
+              ))}
+            </select>
+          </div>
+          <div className="form-group">
+            <label className="form-label">Deadline (optional)</label>
+            <input className="form-input" type="date" value={deadline} onChange={e => setDeadline(e.target.value)} />
+          </div>
+          {error && <p className="error-text">{error}</p>}
+        </div>
+        <div className="modal-footer">
+          <button className="btn btn-ghost" onClick={onClose}>Cancel</button>
+          <button className="btn btn-primary" onClick={submit} disabled={saving}>
+            {saving ? 'Assigning…' : 'Assign'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
 /* Candidate view                                                       */
 /* ------------------------------------------------------------------ */
 function CandidateDashboard({ problems, progress, loading, error }) {
-  const solved = progress.filter(p => p.status === 'completed').length;
-  const total  = problems.length;
-  const easy   = problems.filter(p => p.difficulty === 'easy').length;
-  const medium = problems.filter(p => p.difficulty === 'medium').length;
-  const hard   = problems.filter(p => p.difficulty === 'hard').length;
+  const navigate  = useNavigate();
+  const solved    = progress.filter(p => p.status === 'completed').length;
+  const total     = problems.length;
+  const easy      = problems.filter(p => p.difficulty === 'easy').length;
+  const medium    = problems.filter(p => p.difficulty === 'medium').length;
+  const hard      = problems.filter(p => p.difficulty === 'hard').length;
+  const assigned  = progress.filter(p => p.deadline && p.status !== 'completed');
 
   return (
     <div className="dashboard">
@@ -44,7 +109,48 @@ function CandidateDashboard({ problems, progress, loading, error }) {
 
       {loading && <PageLoader />}
       {error   && <p className="error-text">{error}</p>}
-      {!loading && !error && <ProblemsTable problems={problems} progress={progress} />}
+
+      {!loading && !error && (
+        <>
+          {assigned.length > 0 && (
+            <>
+              <h2 className="section-title">Assigned to me</h2>
+              <div className="table-wrap" style={{ marginBottom: 32 }}>
+                <table className="data-table">
+                  <thead>
+                    <tr><th>Problem</th><th>Difficulty</th><th>Deadline</th><th>Status</th><th></th></tr>
+                  </thead>
+                  <tbody>
+                    {assigned.map(p => {
+                      const problem = problems.find(pr => pr.id === (p.problemId || p.Problem?.id));
+                      const title   = problem?.title ?? p.Problem?.title ?? `Problem #${p.problemId}`;
+                      const diff    = problem?.difficulty ?? p.Problem?.difficulty ?? '—';
+                      const dead    = p.deadline ? new Date(p.deadline).toLocaleDateString() : '—';
+                      const isOver  = p.deadline && new Date(p.deadline) < new Date();
+                      return (
+                        <tr key={p.id} className="table-row">
+                          <td className="problem-title">{title}</td>
+                          <td><span className={`pill pill-${diff}`}>{diff}</span></td>
+                          <td style={{ color: isOver ? 'var(--error)' : 'var(--text)' }}>{dead}</td>
+                          <td><span className={`pill ${p.status === 'completed' ? 'pill-easy' : 'pill-medium'}`}>{p.status}</span></td>
+                          <td>
+                            <button className="btn btn-primary" style={{ padding: '4px 12px', fontSize: 'var(--text-xs)' }}
+                              onClick={() => navigate(`/problems/${p.problemId || p.Problem?.id}`)}>
+                              {p.status === 'completed' ? 'Review' : 'Start'}
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+              <h2 className="section-title">Open Repository</h2>
+            </>
+          )}
+          <ProblemsTable problems={problems} progress={progress} />
+        </>
+      )}
     </div>
   );
 }
@@ -52,19 +158,15 @@ function CandidateDashboard({ problems, progress, loading, error }) {
 /* ------------------------------------------------------------------ */
 /* Company view                                                         */
 /* ------------------------------------------------------------------ */
-function CompanyDashboard({ problems, evaluations, users, loading, error }) {
-  const navigate = useNavigate();
-  const user = getStoredUser();
-  const myProblems = problems.filter(p => p.createdBy === user?.userId);
+function CompanyDashboard({ problems, evaluations, users, loading, error, onRefresh }) {
+  const navigate    = useNavigate();
+  const user        = getStoredUser();
+  const myProblems  = problems.filter(p => p.createdBy === user?.userId);
+  const candidates  = users.filter(u => u.userRole === 'candidate');
+  const [assignModal, setAssignModal] = useState(null);
 
-  const userName = (id) => {
-    const u = users.find(u => u.userId === id);
-    return u ? `${u.firstName} ${u.lastName}` : `User #${id}`;
-  };
-  const problemTitle = (id) => {
-    const p = problems.find(p => p.id === id);
-    return p ? p.title : `Problem #${id}`;
-  };
+  const userName    = id => { const u = users.find(u => u.userId === id); return u ? `${u.firstName} ${u.lastName}` : `User #${id}`; };
+  const problemTitle = id => { const p = problems.find(p => p.id === id); return p ? p.title : `Problem #${id}`; };
 
   return (
     <div className="dashboard">
@@ -85,14 +187,10 @@ function CompanyDashboard({ problems, evaluations, users, loading, error }) {
           <div className="table-wrap" style={{ marginBottom: 32 }}>
             <table className="data-table">
               <thead>
-                <tr>
-                  <th>Title</th><th>Difficulty</th><th>Topic</th><th>Type</th><th>Visibility</th><th></th>
-                </tr>
+                <tr><th>Title</th><th>Difficulty</th><th>Topic</th><th>Type</th><th>Visibility</th><th></th></tr>
               </thead>
               <tbody>
-                {myProblems.length === 0 && (
-                  <tr><td colSpan={6} className="table-empty">No problems created yet.</td></tr>
-                )}
+                {myProblems.length === 0 && <tr><td colSpan={6} className="table-empty">No problems created yet.</td></tr>}
                 {myProblems.map(p => (
                   <tr key={p.id} className="table-row" style={{ cursor: 'pointer' }} onClick={() => navigate(`/problems/${p.id}`)}>
                     <td className="problem-title">{p.title}</td>
@@ -102,8 +200,12 @@ function CompanyDashboard({ problems, evaluations, users, loading, error }) {
                     <td><span className={`pill ${p.isPublic ? 'pill-easy' : 'pill-hard'}`}>{p.isPublic ? 'Public' : 'Private'}</span></td>
                     <td>
                       <div style={{ display: 'flex', gap: 8 }}>
-                        <button className="btn btn-ghost" style={{ padding: '4px 10px', fontSize: 'var(--text-xs)' }} onClick={e => { e.stopPropagation(); navigate(`/problems/${p.id}/edit`); }}>Edit</button>
-                        <button className="btn btn-ghost" style={{ padding: '4px 10px', fontSize: 'var(--text-xs)', color: 'var(--error)' }} onClick={async e => { e.stopPropagation(); if (window.confirm(`Delete "${p.title}"?`)) { await deleteProblem(p.id); window.location.reload(); } }}>Delete</button>
+                        <button className="btn btn-ghost" style={{ padding: '4px 10px', fontSize: 'var(--text-xs)' }}
+                          onClick={e => { e.stopPropagation(); setAssignModal(p); }}>Assign</button>
+                        <button className="btn btn-ghost" style={{ padding: '4px 10px', fontSize: 'var(--text-xs)' }}
+                          onClick={e => { e.stopPropagation(); navigate(`/problems/${p.id}/edit`); }}>Edit</button>
+                        <button className="btn btn-ghost" style={{ padding: '4px 10px', fontSize: 'var(--text-xs)', color: 'var(--error)' }}
+                          onClick={async e => { e.stopPropagation(); if (window.confirm(`Delete "${p.title}"?`)) { await deleteProblem(p.id); window.location.reload(); } }}>Delete</button>
                       </div>
                     </td>
                   </tr>
@@ -119,25 +221,32 @@ function CompanyDashboard({ problems, evaluations, users, loading, error }) {
                 <tr><th>Candidate</th><th>Email</th><th>Problem</th><th>Score</th><th>Feedback</th></tr>
               </thead>
               <tbody>
-                {evaluations.length === 0 && (
-                  <tr><td colSpan={5} className="table-empty">No evaluations yet.</td></tr>
-                )}
+                {evaluations.length === 0 && <tr><td colSpan={5} className="table-empty">No evaluations yet.</td></tr>}
                 {evaluations.map(e => {
                   const u = users.find(u => u.userId === e.userId);
                   return (
-                  <tr key={e.id} className="table-row">
-                    <td>{userName(e.userId)}</td>
-                    <td className="muted">{u?.email ?? '—'}</td>
-                    <td>{problemTitle(e.problemId)}</td>
-                    <td><strong style={{ color: 'var(--accent)' }}>{e.score}</strong></td>
-                    <td className="muted" style={{ maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.feedback}</td>
-                  </tr>
+                    <tr key={e.id} className="table-row">
+                      <td>{userName(e.userId)}</td>
+                      <td className="muted">{u?.email ?? '—'}</td>
+                      <td>{problemTitle(e.problemId)}</td>
+                      <td><strong style={{ color: 'var(--accent)' }}>{e.score}</strong></td>
+                      <td className="muted" style={{ maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.feedback}</td>
+                    </tr>
                   );
                 })}
               </tbody>
             </table>
           </div>
         </>
+      )}
+
+      {assignModal && (
+        <AssignModal
+          problem={assignModal}
+          candidates={candidates}
+          onClose={() => setAssignModal(null)}
+          onAssigned={onRefresh}
+        />
       )}
     </div>
   );
@@ -236,46 +345,46 @@ export default function Dashboard() {
   const [loading,     setLoading]     = useState(true);
   const [error,       setError]       = useState('');
 
-  useEffect(() => {
-    async function load() {
-      try {
-        if (role === 'candidate') {
-          const [probs, prog] = await Promise.all([
-            listProblems(),
-            get('/progress').catch(() => []),
-          ]);
-          setProblems(probs);
-          setProgress(prog);
-        } else if (role === 'company') {
-          const [probs, evals, us] = await Promise.all([
-            listProblems(),
-            get('/evaluations').catch(() => []),
-            get('/users').catch(() => []),
-          ]);
-          setProblems(probs);
-          setEvaluations(evals);
-          setUsers(us);
-        } else if (role === 'admin') {
-          const [probs, us] = await Promise.all([
-            listProblems(),
-            get('/users').catch(() => []),
-          ]);
-          setProblems(probs);
-          setUsers(us);
-        }
-      } catch (err) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
+  const load = async () => {
+    setLoading(true);
+    try {
+      if (role === 'candidate') {
+        const [probs, prog] = await Promise.all([
+          listProblems(),
+          get('/progress').catch(() => []),
+        ]);
+        setProblems(probs);
+        setProgress(Array.isArray(prog) ? prog : []);
+      } else if (role === 'company') {
+        const [probs, evals, us] = await Promise.all([
+          listProblems(),
+          get('/evaluations').catch(() => []),
+          get('/users').catch(() => []),
+        ]);
+        setProblems(probs);
+        setEvaluations(Array.isArray(evals) ? evals : []);
+        setUsers(Array.isArray(us) ? us : []);
+      } else if (role === 'admin') {
+        const [probs, us] = await Promise.all([
+          listProblems(),
+          get('/users').catch(() => []),
+        ]);
+        setProblems(probs);
+        setUsers(Array.isArray(us) ? us : []);
       }
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
     }
-    load();
-  }, [role]);
+  };
+
+  useEffect(() => { load(); }, [role]);
 
   return (
     <Layout>
       {role === 'candidate' && <CandidateDashboard problems={problems} progress={progress}    loading={loading} error={error} />}
-      {role === 'company'   && <CompanyDashboard   problems={problems} evaluations={evaluations} users={users} loading={loading} error={error} />}
+      {role === 'company'   && <CompanyDashboard   problems={problems} evaluations={evaluations} users={users} loading={loading} error={error} onRefresh={load} />}
       {role === 'admin'     && <AdminDashboard     problems={problems} users={users}          loading={loading} error={error} />}
     </Layout>
   );

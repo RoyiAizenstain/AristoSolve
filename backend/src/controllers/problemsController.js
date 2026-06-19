@@ -1,4 +1,4 @@
-const { Problem } = require('../../models/index');
+const { Problem, Progress } = require('../../models/index');
 const { Op } = require('sequelize');
 
 const VALID_DIFFICULTIES = ['easy', 'medium', 'hard'];
@@ -37,7 +37,11 @@ const getById = async (req, res) => {
     if (!problem) return fail(res, 404, 'NOT_FOUND', `Problem ${id} not found`);
     const role = req.headers['x-user-role'];
     const requesterId = parseInt(req.headers['x-user-id']);
-    if (!problem.isPublic && role === 'candidate') return fail(res, 403, 'FORBIDDEN', 'Access denied');
+    if (!problem.isPublic && role === 'candidate') {
+      // Allow if the problem was assigned to this candidate
+      const assigned = await Progress.findOne({ where: { userId: requesterId, problemId: id } });
+      if (!assigned) return fail(res, 403, 'FORBIDDEN', 'Access denied');
+    }
     if (!problem.isPublic && role === 'company' && problem.createdBy !== requesterId) return fail(res, 403, 'FORBIDDEN', 'Access denied');
     ok(res, problem);
   } catch (e) { fail(res, 500, 'INTERNAL_ERROR', e.message); }

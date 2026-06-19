@@ -9,7 +9,6 @@ module.exports = (sequelize) => sequelize.define('Progress', {
   lastAttemptAt: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
   deadline:      { type: DataTypes.DATE, allowNull: true },
 }, {
-  tableName: 'progress',
-  createdAt: 'lastAttemptAt',
-  updatedAt: false,
+  tableName:  'progress',
+  timestamps: false,
 });
