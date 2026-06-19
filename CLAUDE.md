@@ -40,7 +40,7 @@ Traditional technical interviews test whether someone can write an algorithm fro
 
 - Runtime: Node.js + Express (backend) + Create React App (frontend, NOT Vite)
 - Backend port: 3000 — Base URL: `http://localhost:3000`
-- Frontend port: 5173 — set via `PORT=5173` in `client/package.json`
+- Frontend port: 5173 — set via `PORT=5173` in `frontend/package.json`
 - Assignment 3: in-memory mock data only, no database
 
 ---
@@ -133,17 +133,40 @@ Goal: replace all in-memory arrays with a real MySQL database so data persists a
 
 | Step | Task |
 |---|---|
-| 1 | Install `sequelize`, `mysql2`, `sequelize-cli` |
-| 2 | Create `.env` — `DB_HOST`, `DB_USER`, `DB_PASS`, `DB_NAME` |
-| 3 | Write Sequelize models: User, Problem, Conversation, Message, Progress, Evaluation, Settings |
-| 4 | Write migrations in `backend/migrations/` — one file per table |
-| 5 | Write seeders — 5 users + 5 problems |
-| 6 | Swap all controllers from in-memory helpers → Sequelize queries |
-| 7 | Add at least one JOIN query (Progress + User + Problem for company dashboard) |
+| 1 | ✅ Install `sequelize`, `mysql2`, `sequelize-cli` |
+| 2 | ✅ Create `.env` — `DB_HOST`, `DB_USER`, `DB_PASS`, `DB_NAME` |
+| 3 | ✅ Write Sequelize models: User, Problem, Conversation, Message, Progress, Evaluation, Settings |
+| 4 | ✅ Write migrations in `backend/migrations/` — one file per table |
+| 5 | ✅ Write seeders — 5 users + 5 problems |
+| 6 | ✅ Swap all controllers from in-memory helpers → Sequelize queries |
+| 7 | ✅ Add at least one JOIN query (Progress + User + Problem for company dashboard) |
 
 Required ORM relationships (A4 requires one-to-many AND many-to-many):
 - one-to-many: `User` → `Conversations`, `User` → `Progress`
 - many-to-many: `User` ↔ `Problem` via `Progress` (junction table)
+
+**Note on Admin model (A4 requirement):** Assignment 4 lists "Admin" as a required model. In AristoSolve, Admin is NOT a separate table — it is a `User` record where `userRole = 'admin'`. The Sequelize `User` model covers this. When graders ask about the Admin model, point to `User` with the `userRole` enum and the last-admin protection logic in the delete controller.
+
+#### .env.example (required for A4 submission)
+
+```
+# Database
+DB_HOST=localhost
+DB_PORT=3306
+DB_USER=root
+DB_PASS=
+DB_NAME=aristosolve
+
+# AI
+ANTHROPIC_API_KEY=your_anthropic_api_key_here
+
+# Server
+PORT=3000
+```
+
+Create `backend/.env` from this template with real values. Never commit `.env` — it is in `.gitignore`.
+
+---
 
 #### Part 2 — Socket.IO — AristoBot Chat (30% of A4 grade)
 
@@ -160,13 +183,15 @@ Goal: replace mocked AristoBot replies with real-time Socket.IO communication so
 
 5 custom events (A4 requires minimum 3):
 
-| Event | Direction | When |
-|---|---|---|
-| `join-conversation` | client → server | Candidate opens ProblemDetail |
-| `send-message` | client → server | Candidate sends chat message |
-| `typing` | server → client | While Claude API is processing |
-| `receive-message` | server → client | Claude reply is ready |
-| `conversation-ended` | client → server | Candidate clicks Submit |
+| Event | Direction | Emitted by | Payload | When |
+|---|---|---|---|---|
+| `join-conversation` | client → server | Frontend | `{ conversationId }` | User opens ProblemDetail — joins a socket room |
+| `send-message` | client → server | Frontend | `{ conversationId, content }` | User sends a chat message |
+| `typing` | server → client | Backend | `{ conversationId }` | Backend received message, Claude API call in progress |
+| `receive-message` | server → client | Backend | `{ conversationId, message }` | Claude reply ready — broadcast to all in the room |
+| `conversation-ended` | client → server | Frontend | `{ conversationId }` | User clicks Submit — backend sets endedAt |
+
+Socket rooms: each conversation gets its own room (`conversationId`). All clients in the same room receive `receive-message` and `typing` events — this enables the 2-tab demo required by A4.
 
 #### Part 3 — Claude AI Integration (20% of A4 grade)
 
@@ -241,7 +266,6 @@ Frontend — Candidate Dashboard:
 | Progress page | New page, `/api/progress` already exists |
 | Evaluation report page | Candidate sees their AI nativeness score |
 | JWT real auth | Replace header-based mock auth |
-| Folder restructure | `frontend/` + `backend/` per A4 spec |
 
 ---
 
@@ -258,7 +282,7 @@ The codebase follows a strict three-layer separation:
 ### Frontend structure
 
 ```
-client/src/
+frontend/src/
 ├── App.js                 ← React Router v7, RequireAuth/RequireRole guards
 ├── index.css              ← CSS custom properties for dark + light theme
 ├── services/
@@ -392,10 +416,11 @@ All routes are under `/api`. Key access rules:
 | PUT    | /settings | own    |
 
 ### Conversations / Messages / Evaluations / Progress
-- Conversations POST: admin, candidate
-- Conversations PUT: admin, candidate (endedAt)
-- Messages POST: admin, candidate (own conv)
-- Progress POST: admin, candidate (own)
+- Conversations POST: admin, candidate, company
+- Conversations GET /:id: admin, candidate, company
+- Conversations PUT: admin, candidate, company (endedAt)
+- Messages POST: admin, candidate, company (own conv)
+- Progress POST: admin, candidate, company (own or assigned)
 - Evaluations POST: admin only
 
 ---

@@ -1,103 +1,91 @@
-const problems = require('../../models/legacy/problems');
+const { Problem } = require('../../models/index');
+const { Op } = require('sequelize');
 
 const VALID_DIFFICULTIES = ['easy', 'medium', 'hard'];
 const VALID_TYPES = ['algorithm', 'system-design', 'debugging'];
 
-const ok = (res, data, status = 200) =>
-  res.status(status).json({ success: true, data, error: null });
+const ok   = (res, data, status = 200) => res.status(status).json({ success: true, data, error: null });
+const fail = (res, status, code, message) => res.status(status).json({ success: false, data: null, error: { code, message, details: {} } });
 
-const fail = (res, status, code, message) =>
-  res.status(status).json({ success: false, data: null, error: { code, message, details: {} } });
-
-const getAll = (req, res) => {
+const getAll = async (req, res) => {
   const { difficulty, topic, type } = req.query;
-  if (difficulty && !VALID_DIFFICULTIES.includes(difficulty))
-    return fail(res, 400, 'VALIDATION_ERROR', `difficulty must be one of: ${VALID_DIFFICULTIES.join(', ')}`);
-  if (type && !VALID_TYPES.includes(type))
-    return fail(res, 400, 'VALIDATION_ERROR', `type must be one of: ${VALID_TYPES.join(', ')}`);
+  if (difficulty && !VALID_DIFFICULTIES.includes(difficulty)) return fail(res, 400, 'VALIDATION_ERROR', `difficulty must be one of: ${VALID_DIFFICULTIES.join(', ')}`);
+  if (type && !VALID_TYPES.includes(type)) return fail(res, 400, 'VALIDATION_ERROR', `type must be one of: ${VALID_TYPES.join(', ')}`);
 
   const role = req.headers['x-user-role'];
   const requesterId = parseInt(req.headers['x-user-id']);
-  let all = problems.findAll({ difficulty, topic, type });
+  const where = {};
+  if (difficulty) where.difficulty = difficulty;
+  if (topic)      where.topic = topic;
+  if (type)       where.type = type;
 
   if (role === 'candidate') {
-    all = all.filter(p => p.isPublic);
+    where.isPublic = true;
   } else if (role === 'company') {
-    all = all.filter(p => p.isPublic || p.createdBy === requesterId);
+    where[Op.or] = [{ isPublic: true }, { createdBy: requesterId }];
   }
-  // admin sees everything
 
-  ok(res, all);
+  try { ok(res, await Problem.findAll({ where })); }
+  catch (e) { fail(res, 500, 'INTERNAL_ERROR', e.message); }
 };
 
-const getById = (req, res) => {
+const getById = async (req, res) => {
   const id = parseInt(req.params.id);
   if (isNaN(id)) return fail(res, 400, 'VALIDATION_ERROR', 'ID must be numeric');
-  const problem = problems.findById(id);
-  if (!problem) return fail(res, 404, 'NOT_FOUND', `Problem ${id} not found`);
-
-  const role = req.headers['x-user-role'];
-  const requesterId = parseInt(req.headers['x-user-id']);
-  if (!problem.isPublic && role === 'candidate')
-    return fail(res, 403, 'FORBIDDEN', 'Access denied');
-  if (!problem.isPublic && role === 'company' && problem.createdBy !== requesterId)
-    return fail(res, 403, 'FORBIDDEN', 'Access denied');
-
-  ok(res, problem);
+  try {
+    const problem = await Problem.findByPk(id);
+    if (!problem) return fail(res, 404, 'NOT_FOUND', `Problem ${id} not found`);
+    const role = req.headers['x-user-role'];
+    const requesterId = parseInt(req.headers['x-user-id']);
+    if (!problem.isPublic && role === 'candidate') return fail(res, 403, 'FORBIDDEN', 'Access denied');
+    if (!problem.isPublic && role === 'company' && problem.createdBy !== requesterId) return fail(res, 403, 'FORBIDDEN', 'Access denied');
+    ok(res, problem);
+  } catch (e) { fail(res, 500, 'INTERNAL_ERROR', e.message); }
 };
 
-const create = (req, res) => {
+const create = async (req, res) => {
   const { title, difficulty, topic, type, description } = req.body;
   if (!title || !difficulty || !topic || !type || !description)
     return fail(res, 400, 'VALIDATION_ERROR', 'title, difficulty, topic, type, and description are required');
-  if (!VALID_DIFFICULTIES.includes(difficulty))
-    return fail(res, 400, 'VALIDATION_ERROR', `difficulty must be one of: ${VALID_DIFFICULTIES.join(', ')}`);
-  if (!VALID_TYPES.includes(type))
-    return fail(res, 400, 'VALIDATION_ERROR', `type must be one of: ${VALID_TYPES.join(', ')}`);
-
+  if (!VALID_DIFFICULTIES.includes(difficulty)) return fail(res, 400, 'VALIDATION_ERROR', `difficulty must be one of: ${VALID_DIFFICULTIES.join(', ')}`);
+  if (!VALID_TYPES.includes(type)) return fail(res, 400, 'VALIDATION_ERROR', `type must be one of: ${VALID_TYPES.join(', ')}`);
   const createdBy = parseInt(req.headers['x-user-id']);
-  if (isNaN(createdBy))
-    return fail(res, 400, 'VALIDATION_ERROR', 'x-user-id header is required to identify the creator');
-
-  const problem = problems.create({ ...req.body, createdBy });
-  ok(res, problem, 201);
+  if (isNaN(createdBy)) return fail(res, 400, 'VALIDATION_ERROR', 'x-user-id header is required');
+  try {
+    const problem = await Problem.create({ ...req.body, createdBy });
+    ok(res, problem, 201);
+  } catch (e) { fail(res, 500, 'INTERNAL_ERROR', e.message); }
 };
 
-const update = (req, res) => {
+const update = async (req, res) => {
   const id = parseInt(req.params.id);
   if (isNaN(id)) return fail(res, 400, 'VALIDATION_ERROR', 'ID must be numeric');
-
-  const problem = problems.findById(id);
-  if (!problem) return fail(res, 404, 'NOT_FOUND', `Problem ${id} not found`);
-
-  const role = req.headers['x-user-role'];
-  const requesterId = parseInt(req.headers['x-user-id']);
-  if (role === 'company' && problem.createdBy !== requesterId)
-    return fail(res, 403, 'FORBIDDEN', 'You can only edit your own problems');
-
   const { difficulty, type } = req.body;
-  if (difficulty && !VALID_DIFFICULTIES.includes(difficulty))
-    return fail(res, 400, 'VALIDATION_ERROR', `difficulty must be one of: ${VALID_DIFFICULTIES.join(', ')}`);
-  if (type && !VALID_TYPES.includes(type))
-    return fail(res, 400, 'VALIDATION_ERROR', `type must be one of: ${VALID_TYPES.join(', ')}`);
-
-  ok(res, problems.update(id, req.body));
+  if (difficulty && !VALID_DIFFICULTIES.includes(difficulty)) return fail(res, 400, 'VALIDATION_ERROR', `difficulty must be one of: ${VALID_DIFFICULTIES.join(', ')}`);
+  if (type && !VALID_TYPES.includes(type)) return fail(res, 400, 'VALIDATION_ERROR', `type must be one of: ${VALID_TYPES.join(', ')}`);
+  try {
+    const problem = await Problem.findByPk(id);
+    if (!problem) return fail(res, 404, 'NOT_FOUND', `Problem ${id} not found`);
+    const role = req.headers['x-user-role'];
+    const requesterId = parseInt(req.headers['x-user-id']);
+    if (role === 'company' && problem.createdBy !== requesterId) return fail(res, 403, 'FORBIDDEN', 'You can only edit your own problems');
+    await problem.update(req.body);
+    ok(res, problem);
+  } catch (e) { fail(res, 500, 'INTERNAL_ERROR', e.message); }
 };
 
-const remove = (req, res) => {
+const remove = async (req, res) => {
   const id = parseInt(req.params.id);
   if (isNaN(id)) return fail(res, 400, 'VALIDATION_ERROR', 'ID must be numeric');
-
-  const problem = problems.findById(id);
-  if (!problem) return fail(res, 404, 'NOT_FOUND', `Problem ${id} not found`);
-
-  const role = req.headers['x-user-role'];
-  const requesterId = parseInt(req.headers['x-user-id']);
-  if (role === 'company' && problem.createdBy !== requesterId)
-    return fail(res, 403, 'FORBIDDEN', 'You can only delete your own problems');
-
-  problems.remove(id);
-  ok(res, { message: `Problem ${id} deleted` });
+  try {
+    const problem = await Problem.findByPk(id);
+    if (!problem) return fail(res, 404, 'NOT_FOUND', `Problem ${id} not found`);
+    const role = req.headers['x-user-role'];
+    const requesterId = parseInt(req.headers['x-user-id']);
+    if (role === 'company' && problem.createdBy !== requesterId) return fail(res, 403, 'FORBIDDEN', 'You can only delete your own problems');
+    await problem.destroy();
+    ok(res, { message: `Problem ${id} deleted` });
+  } catch (e) { fail(res, 500, 'INTERNAL_ERROR', e.message); }
 };
 
 module.exports = { getAll, getById, create, update, remove };
