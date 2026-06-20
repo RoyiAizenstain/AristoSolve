@@ -174,12 +174,12 @@ Goal: replace mocked AristoBot replies with real-time Socket.IO communication so
 
 | Step | Task |
 |---|---|
-| 1 | Install `socket.io` (backend) + `socket.io-client` (frontend) |
-| 2 | Wire Socket.IO to Express server in `server.js` |
-| 3 | Backend: implement 5 custom socket events |
-| 4 | Frontend: replace mocked replies in `ProblemDetail.jsx` with socket flow |
-| 5 | Show "AristoBot is thinking..." typing indicator while AI processes |
-| 6 | Demo: 2 browser tabs on same conversation, messages sync live |
+| 1 | ✅ Install `socket.io` (backend) + `socket.io-client` (frontend) |
+| 2 | ✅ Wire Socket.IO to Express server in `server.js` |
+| 3 | ✅ Backend: implement 5 custom socket events |
+| 4 | ✅ Frontend: replace mocked replies in `ProblemDetail.jsx` with socket flow |
+| 5 | ✅ Show "AristoBot is thinking..." typing indicator while AI processes |
+| 6 | ✅ Demo: 2 browser tabs on same conversation, messages sync live |
 
 5 custom events (A4 requires minimum 3):
 

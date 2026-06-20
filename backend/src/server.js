@@ -22,4 +22,7 @@ app.use('/api/evaluations', require('./routes/evaluations'));
 app.use('/api/progress', require('./routes/progress'));
 app.use('/api/settings', require('./routes/settings'));
 
-app.listen(3000, () => console.log('Server running on http://localhost:3000'));
+const httpServer = require('http').createServer(app);
+const io = require('./socket')(httpServer);
+
+httpServer.listen(3000, () => console.log('Server running on http://localhost:3000'));

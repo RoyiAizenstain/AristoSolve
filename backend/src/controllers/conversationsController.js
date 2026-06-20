@@ -6,8 +6,25 @@ const ok   = (res, data, status = 200) => res.status(status).json({ success: tru
 const fail = (res, status, code, message) => res.status(status).json({ success: false, data: null, error: { code, message, details: {} } });
 
 const getAll = async (req, res) => {
-  try { ok(res, await Conversation.findAll()); }
-  catch (e) { fail(res, 500, 'INTERNAL_ERROR', e.message); }
+  const role        = req.headers['x-user-role'];
+  const requesterId = parseInt(req.headers['x-user-id']);
+  const { problemId } = req.query;
+
+  try {
+    // Candidate/company: return their own conversations, optionally filtered by problem
+    if (role !== 'admin') {
+      const where = { userId: requesterId };
+      if (problemId) where.problemId = parseInt(problemId);
+      const conversations = await Conversation.findAll({
+        where,
+        include: [{ model: Message, as: 'Messages', order: [['sequenceNumber', 'ASC']] }],
+        order: [['startedAt', 'DESC']],
+      });
+      return ok(res, conversations);
+    }
+    // Admin: return all
+    ok(res, await Conversation.findAll());
+  } catch (e) { fail(res, 500, 'INTERNAL_ERROR', e.message); }
 };
 
 const getById = async (req, res) => {

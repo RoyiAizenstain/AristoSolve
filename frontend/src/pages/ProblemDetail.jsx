@@ -1,24 +1,15 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { io } from 'socket.io-client';
 import MessageBubble from '../components/MessageBubble';
 import DifficultyPill from '../components/DifficultyPill';
 import { getProblem } from '../services/problems';
-import { createConversation, endConversation } from '../services/conversations';
+import { createConversation } from '../services/conversations';
+import { get as apiGet } from '../services/api';
 import { sendMessage } from '../services/messages';
 import { get, put, getStoredUser } from '../services/api';
 
 const LANGUAGES = ['python', 'javascript', 'java'];
-
-const MENTOR_REPLIES = [
-  "What's your first instinct when you see this problem?",
-  "Good. What would be the time complexity of that approach?",
-  "Can you think of a data structure that might help reduce that complexity?",
-  "What edge cases should you consider here?",
-  "How would your solution handle an empty input?",
-  "You're thinking in the right direction. What's the space complexity?",
-  "Try to explain your approach as if I had never seen this problem.",
-  "What would happen if all elements in the array are the same?",
-];
 
 const STARTER = {
   python:     `def solution():\n    # Write your solution here\n    pass\n`,
@@ -26,23 +17,27 @@ const STARTER = {
   java:       `class Solution {\n    public void solution() {\n        // Write your solution here\n    }\n}\n`,
 };
 
+const INITIAL_GREETING = "What's your first instinct when you see this problem?";
+
 export default function ProblemDetail() {
   const { id }       = useParams();
   const navigate     = useNavigate();
   const bottomRef    = useRef(null);
-  const replyIndex   = useRef(0);
+  const socketRef    = useRef(null);
+  const chatInputRef = useRef(null);
 
-  const [problem, setProblem]         = useState(null);
-  const [convId, setConvId]           = useState(null);
-  const [messages, setMessages]       = useState([]);
-  const [input, setInput]             = useState('');
-  const [sending, setSending]         = useState(false);
-  const [language, setLanguage]       = useState('python');
-  const [code, setCode]               = useState(STARTER.python);
-  const [activeTab, setActiveTab]     = useState('aristobot');
-  const [elapsed, setElapsed]         = useState(0);
-  const [loading, setLoading]         = useState(true);
-  const [error, setError]             = useState('');
+  const [problem,    setProblem]    = useState(null);
+  const [convId,     setConvId]     = useState(null);
+  const [messages,   setMessages]   = useState([]);
+  const [input,      setInput]      = useState('');
+  const [sending,    setSending]    = useState(false);
+  const [typing,     setTyping]     = useState(false);
+  const [language,   setLanguage]   = useState('python');
+  const [code,       setCode]       = useState(STARTER.python);
+  const [activeTab,  setActiveTab]  = useState('aristobot');
+  const [elapsed,    setElapsed]    = useState(0);
+  const [loading,    setLoading]    = useState(true);
+  const [error,      setError]      = useState('');
 
   /* ---- Timer ---- */
   useEffect(() => {
@@ -53,36 +48,89 @@ export default function ProblemDetail() {
   const mm = String(Math.floor(elapsed / 60)).padStart(2, '0');
   const ss = String(elapsed % 60).padStart(2, '0');
 
-  /* ---- Load problem + create conversation ---- */
+  /* ---- Load problem + create conversation + connect socket ---- */
   useEffect(() => {
+    let socket;
+
+    let isMounted = true;
+
     async function init() {
       try {
         const prob = await getProblem(id);
+        if (!isMounted) return;
         setProblem(prob);
         setCode(prob.starterCode?.[language] ?? STARTER[language]);
 
-        const conv = await createConversation(Number(id), language);
+        // Check for existing open conversation for this problem
+        const existing = await apiGet(`/conversations?problemId=${id}`).catch(() => []);
+        if (!isMounted) return;
+        const openConv = Array.isArray(existing) ? existing.find(c => !c.endedAt) : null;
+
+        let conv;
+        if (openConv) {
+          conv = openConv;
+          const msgs = (openConv.Messages || [])
+            .sort((a, b) => a.sequenceNumber - b.sequenceNumber)
+            .map(m => ({ id: m.id, role: m.role, content: m.content }));
+          setMessages(msgs);
+        } else {
+          conv = await createConversation(Number(id), language);
+          if (!isMounted) return;
+          await sendMessage(conv.id, 'assistant', INITIAL_GREETING);
+          setMessages([{ id: Date.now(), role: 'assistant', content: INITIAL_GREETING }]);
+        }
         setConvId(conv.id);
 
-        // Auto-send first AristoBot greeting
-        const greeting = MENTOR_REPLIES[0];
-        replyIndex.current = 1;
-        await sendMessage(conv.id, 'assistant', greeting);
-        setMessages([{ id: Date.now(), role: 'assistant', content: greeting }]);
+        // Connect socket
+        const newSocket = io('http://localhost:3000', { transports: ['websocket'] });
+        socketRef.current = newSocket;
+        newSocket.emit('join-conversation', { conversationId: conv.id });
+
+        newSocket.on('typing', () => {
+          if (!isMounted) return;
+          setTyping(true);
+          setSending(false);
+        });
+
+        newSocket.on('receive-message', ({ message }) => {
+          if (!isMounted) return;
+          setTyping(false);
+          setSending(false);
+          setMessages(prev => {
+            // Deduplicate by DB id
+            if (prev.some(m => m.id === message.id)) return prev;
+            return [...prev, {
+              id:      message.id ?? Date.now(),
+              role:    message.role,
+              content: message.content,
+            }];
+          });
+          setTimeout(() => chatInputRef.current?.focus(), 50);
+        });
+
       } catch (err) {
-        setError(err.message);
+        if (isMounted) setError(err.message);
       } finally {
-        setLoading(false);
+        if (isMounted) setLoading(false);
       }
     }
+
     init();
+
+    return () => {
+      isMounted = false;
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+        socketRef.current = null;
+      }
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   /* ---- Scroll to bottom on new message ---- */
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  }, [messages, typing]);
 
   /* ---- Language change ---- */
   function handleLanguageChange(lang) {
@@ -90,29 +138,23 @@ export default function ProblemDetail() {
     setCode(problem?.starterCode?.[lang] ?? STARTER[lang]);
   }
 
-  /* ---- Send user message + mocked reply ---- */
-  async function handleSend() {
-    if (!input.trim() || sending || !convId) return;
+  /* ---- Send user message via socket ---- */
+  function handleSend() {
+    if (!input.trim() || sending || typing || !convId || !socketRef.current) return;
     const userText = input.trim();
     setInput('');
     setSending(true);
 
-    const userMsg = { id: Date.now(), role: 'user', content: userText };
-    setMessages(m => [...m, userMsg]);
+    // Add user message to UI immediately (optimistic)
+    setMessages(prev => [...prev, { id: `local-${Date.now()}`, role: 'user', content: userText }]);
 
-    try {
-      await sendMessage(convId, 'user', userText);
+    // Send via socket — server handles saving to DB + generating reply
+    socketRef.current.emit('send-message', {
+      conversationId: convId,
+      content: userText,
+      userId: getStoredUser()?.userId,
+    });
 
-      // Mocked AristoBot reply
-      const reply = MENTOR_REPLIES[replyIndex.current % MENTOR_REPLIES.length];
-      replyIndex.current += 1;
-      await sendMessage(convId, 'assistant', reply);
-      setMessages(m => [...m, { id: Date.now() + 1, role: 'assistant', content: reply }]);
-    } catch (err) {
-      setMessages(m => [...m, { id: Date.now() + 2, role: 'assistant', content: `(Error: ${err.message})` }]);
-    } finally {
-      setSending(false);
-    }
   }
 
   function handleKeyDown(e) {
@@ -123,18 +165,22 @@ export default function ProblemDetail() {
   async function handleSubmit() {
     if (!convId) return;
     try {
+      // Send final code as last message via REST
       await sendMessage(convId, 'user', `[Final submission]\n\`\`\`${language}\n${code}\n\`\`\``);
-      await endConversation(convId);
-      // Mark progress as completed if a record exists for this user+problem
+
+      // Tell socket server the conversation ended (sets endedAt in DB)
+      if (socketRef.current) {
+        socketRef.current.emit('conversation-ended', { conversationId: convId });
+      }
+
+      // Mark progress as completed
       const user = getStoredUser();
       if (user) {
         const allProgress = await get('/progress').catch(() => []);
         const record = Array.isArray(allProgress)
           ? allProgress.find(p => (p.problemId || p.Problem?.id) === parseInt(id) && p.userId === user.userId)
           : null;
-        if (record) {
-          await put(`/progress/${record.id}`, { status: 'completed' }).catch(() => {});
-        }
+        if (record) await put(`/progress/${record.id}`, { status: 'completed' }).catch(() => {});
       }
     } catch { /* best-effort */ }
     navigate('/dashboard');
@@ -199,7 +245,7 @@ export default function ProblemDetail() {
           )}
         </div>
 
-        {/* MIDDLE — Code editor + Test cases */}
+        {/* MIDDLE — Code editor */}
         <div className="pd-panel pd-editor">
           <div className="pd-editor-top">
             <h3 className="pd-section-title" style={{ margin: 0 }}>Code</h3>
@@ -215,9 +261,7 @@ export default function ProblemDetail() {
                   const end = el.selectionEnd;
                   const next = code.substring(0, start) + '    ' + code.substring(end);
                   setCode(next);
-                  requestAnimationFrame(() => {
-                    el.selectionStart = el.selectionEnd = start + 4;
-                  });
+                  requestAnimationFrame(() => { el.selectionStart = el.selectionEnd = start + 4; });
                 }
               }}
               spellCheck={false}
@@ -241,7 +285,6 @@ export default function ProblemDetail() {
 
         {/* RIGHT — AristoBot */}
         <div className="pd-panel pd-chat">
-          {/* Tabs */}
           <div className="pd-tabs">
             {['aristobot', 'guide'].map(tab => (
               <button
@@ -260,7 +303,6 @@ export default function ProblemDetail() {
             </div>
           ) : (
             <>
-              {/* Chat messages */}
               <div className="pd-messages">
                 {messages.length === 0 && (
                   <div className="pd-empty-state">
@@ -274,26 +316,33 @@ export default function ProblemDetail() {
                 {messages.map(msg => (
                   <MessageBubble key={msg.id} role={msg.role} content={msg.content} />
                 ))}
-                {sending && (
+                {/* Step 5: typing indicator */}
+                {typing && (
                   <div className="bubble-row bubble-row-ai">
-                    <div className="bubble bubble-ai"><span className="spinner" /></div>
+                    <div className="bubble bubble-ai typing-indicator">
+                      <span /><span /><span />
+                    </div>
                   </div>
                 )}
                 <div ref={bottomRef} />
               </div>
 
-              {/* Input */}
               <div className="pd-input-row">
                 <textarea
+                  ref={chatInputRef}
                   className="pd-chat-input"
-                  placeholder="Ask for a hint…"
+                  placeholder="Ask AristoBot for a hint…"
                   value={input}
                   onChange={e => setInput(e.target.value)}
                   onKeyDown={handleKeyDown}
                   rows={2}
-                  disabled={sending}
+                  disabled={sending || typing}
                 />
-                <button className="btn btn-primary pd-send-btn" onClick={handleSend} disabled={sending || !input.trim()}>
+                <button
+                  className="btn btn-primary pd-send-btn"
+                  onClick={handleSend}
+                  disabled={sending || typing || !input.trim()}
+                >
                   ↑
                 </button>
               </div>
