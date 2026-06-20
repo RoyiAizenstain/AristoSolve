@@ -199,10 +199,10 @@ Goal: implement the two AI features that make AristoSolve unique — a real Socr
 
 | Step | Task |
 |---|---|
-| 1 | Install `@anthropic-ai/sdk` |
-| 2 | Add `ANTHROPIC_API_KEY` to `.env` — never exposed to frontend |
-| 3 | AristoBot mentor: backend calls Claude after each `send-message` socket event |
-| 4 | Evaluation: `POST /api/evaluations` calls Claude with full conversation + `evalPrompt` |
+| 1 | ✅ Install `@anthropic-ai/sdk` |
+| 2 | ✅ Add `ANTHROPIC_API_KEY` to `.env` — never exposed to frontend |
+| 3 | ✅ AristoBot mentor: backend calls Claude Haiku after each `send-message` socket event, language-aware, syntax help enabled, fallback to canned replies if API unavailable |
+| 4 | ✅ Evaluation: auto-triggered on submit — calls Claude with full conversation + `evalPrompt`, scores AI nativeness + code quality, company sees full report with dimension progress bars |
 
 **AristoBot system prompt:**
 ```

@@ -4,7 +4,7 @@ import { io } from 'socket.io-client';
 import MessageBubble from '../components/MessageBubble';
 import DifficultyPill from '../components/DifficultyPill';
 import { getProblem } from '../services/problems';
-import { createConversation } from '../services/conversations';
+import { createConversation, endConversation } from '../services/conversations';
 import { get as apiGet } from '../services/api';
 import { sendMessage } from '../services/messages';
 import { get, put, getStoredUser } from '../services/api';
@@ -148,11 +148,12 @@ export default function ProblemDetail() {
     // Add user message to UI immediately (optimistic)
     setMessages(prev => [...prev, { id: `local-${Date.now()}`, role: 'user', content: userText }]);
 
-    // Send via socket — server handles saving to DB + generating reply
+    // Send via socket — include current language so AristoBot uses the right syntax
     socketRef.current.emit('send-message', {
       conversationId: convId,
       content: userText,
       userId: getStoredUser()?.userId,
+      language,
     });
 
   }
@@ -168,7 +169,10 @@ export default function ProblemDetail() {
       // Send final code as last message via REST
       await sendMessage(convId, 'user', `[Final submission]\n\`\`\`${language}\n${code}\n\`\`\``);
 
-      // Tell socket server the conversation ended (sets endedAt in DB)
+      // REST call sets endedAt + triggers Claude AI evaluation
+      await endConversation(convId);
+
+      // Socket event notifies other tabs in the room
       if (socketRef.current) {
         socketRef.current.emit('conversation-ended', { conversationId: convId });
       }

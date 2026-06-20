@@ -7,6 +7,95 @@ import PageLoader from '../components/PageLoader';
 import { listProblems, deleteProblem } from '../services/problems';
 import { get, post, getStoredUser } from '../services/api';
 
+/* ------------------------------------------------------------------ */
+/* Evaluation Detail Modal                                              */
+/* ------------------------------------------------------------------ */
+function EvaluationModal({ evaluation, users, problems, onClose }) {
+  const u = users.find(u => u.userId === evaluation.userId);
+  const p = problems.find(p => p.id === evaluation.problemId);
+  const dim = evaluation.dimensions || {};
+
+  const scoreColor = (s) => {
+    if (s === null || s === undefined) return 'var(--muted)';
+    if (s >= 75) return 'var(--success)';
+    if (s >= 50) return '#fb923c';
+    return 'var(--error)';
+  };
+
+  return (
+    <div className="modal-backdrop" onClick={onClose}>
+      <div className="modal" style={{ maxWidth: 600 }} onClick={e => e.stopPropagation()}>
+        <div className="modal-header">
+          <h2 className="modal-title">Evaluation Report</h2>
+          <button className="modal-close" onClick={onClose}>✕</button>
+        </div>
+        <div className="modal-body">
+
+          {/* Header info */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
+            <div>
+              <p style={{ fontWeight: 600, color: 'var(--text)' }}>{u ? `${u.firstName} ${u.lastName}` : `User #${evaluation.userId}`}</p>
+              <p className="muted" style={{ fontSize: 'var(--text-sm)' }}>{u?.email}</p>
+              <p className="muted" style={{ fontSize: 'var(--text-sm)', marginTop: 4 }}>Problem: <span style={{ color: 'var(--text)' }}>{p?.title ?? `#${evaluation.problemId}`}</span></p>
+            </div>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: 48, fontWeight: 700, color: scoreColor(evaluation.score), lineHeight: 1 }}>
+                {evaluation.score ?? '—'}
+              </div>
+              <div className="muted" style={{ fontSize: 'var(--text-xs)' }}>Overall Score</div>
+            </div>
+          </div>
+
+          {/* Dimension scores */}
+          {dim.prompting !== undefined && (
+            <div style={{ marginBottom: 20 }}>
+              <p style={{ fontWeight: 600, color: 'var(--text)', marginBottom: 10, fontSize: 'var(--text-sm)' }}>Dimension Scores</p>
+              {[
+                { label: 'Prompting skill',    key: 'prompting' },
+                { label: 'Critical thinking',  key: 'criticalThinking' },
+                { label: 'Adaptability',        key: 'adaptability' },
+                { label: 'Code correctness',    key: 'codeCorrectness' },
+              ].map(({ label, key }) => (
+                <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
+                  <span style={{ width: 140, fontSize: 'var(--text-sm)', color: 'var(--muted)' }}>{label}</span>
+                  <div style={{ flex: 1, background: 'var(--surface-2)', borderRadius: 4, height: 8 }}>
+                    <div style={{ width: `${dim[key] ?? 0}%`, background: scoreColor(dim[key]), height: 8, borderRadius: 4, transition: 'width 0.5s' }} />
+                  </div>
+                  <span style={{ width: 36, textAlign: 'right', fontWeight: 600, color: scoreColor(dim[key]), fontSize: 'var(--text-sm)' }}>{dim[key] ?? '—'}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Feedback */}
+          {evaluation.feedback && (
+            <div style={{ marginBottom: 16 }}>
+              <p style={{ fontWeight: 600, color: 'var(--text)', marginBottom: 6, fontSize: 'var(--text-sm)' }}>Overall Feedback</p>
+              <p style={{ color: 'var(--muted)', fontSize: 'var(--text-sm)', lineHeight: 1.6, background: 'var(--surface-2)', padding: '10px 14px', borderRadius: 8 }}>{evaluation.feedback}</p>
+            </div>
+          )}
+
+          {/* Thinking analysis */}
+          {evaluation.thinkingAnalysis && (
+            <div style={{ marginBottom: 16 }}>
+              <p style={{ fontWeight: 600, color: 'var(--text)', marginBottom: 6, fontSize: 'var(--text-sm)' }}>AI Thinking Analysis</p>
+              <p style={{ color: 'var(--muted)', fontSize: 'var(--text-sm)', lineHeight: 1.6, background: 'var(--surface-2)', padding: '10px 14px', borderRadius: 8 }}>{evaluation.thinkingAnalysis}</p>
+            </div>
+          )}
+
+          {/* Code analysis */}
+          {dim.codeAnalysis && (
+            <div>
+              <p style={{ fontWeight: 600, color: 'var(--text)', marginBottom: 6, fontSize: 'var(--text-sm)' }}>Code Analysis</p>
+              <p style={{ color: 'var(--muted)', fontSize: 'var(--text-sm)', lineHeight: 1.6, background: 'var(--surface-2)', padding: '10px 14px', borderRadius: 8 }}>{dim.codeAnalysis}</p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const STAT_CARDS = [
   { icon: '🤖', title: 'AI-Guided, Not AI-Solved',         description: 'Nudges your thinking without giving answers.' },
   { icon: '💬', title: 'Mentor, Not Solver',                description: 'AristoBot asks the right questions so you find the answer.' },
@@ -164,6 +253,7 @@ function CompanyDashboard({ problems, evaluations, users, loading, error, onRefr
   const myProblems  = problems.filter(p => p.createdBy === user?.userId);
   const candidates  = users.filter(u => u.userRole === 'candidate');
   const [assignModal, setAssignModal] = useState(null);
+  const [evalModal,   setEvalModal]   = useState(null);
 
   const userName    = id => { const u = users.find(u => u.userId === id); return u ? `${u.firstName} ${u.lastName}` : `User #${id}`; };
   const problemTitle = id => { const p = problems.find(p => p.id === id); return p ? p.title : `Problem #${id}`; };
@@ -218,19 +308,21 @@ function CompanyDashboard({ problems, evaluations, users, loading, error, onRefr
           <div className="table-wrap">
             <table className="data-table">
               <thead>
-                <tr><th>Candidate</th><th>Email</th><th>Problem</th><th>Score</th><th>Feedback</th></tr>
+                <tr><th>Candidate</th><th>Email</th><th>Problem</th><th>Score</th><th>Feedback</th><th></th></tr>
               </thead>
               <tbody>
-                {evaluations.length === 0 && <tr><td colSpan={5} className="table-empty">No evaluations yet.</td></tr>}
+                {evaluations.length === 0 && <tr><td colSpan={6} className="table-empty">No evaluations yet.</td></tr>}
                 {evaluations.map(e => {
                   const u = users.find(u => u.userId === e.userId);
+                  const scoreColor = e.score >= 75 ? 'var(--success)' : e.score >= 50 ? '#fb923c' : e.score ? 'var(--error)' : 'var(--muted)';
                   return (
-                    <tr key={e.id} className="table-row">
+                    <tr key={e.id} className="table-row" style={{ cursor: 'pointer' }} onClick={() => setEvalModal(e)}>
                       <td>{userName(e.userId)}</td>
                       <td className="muted">{u?.email ?? '—'}</td>
                       <td>{problemTitle(e.problemId)}</td>
-                      <td><strong style={{ color: 'var(--accent)' }}>{e.score}</strong></td>
-                      <td className="muted" style={{ maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.feedback}</td>
+                      <td><strong style={{ color: scoreColor }}>{e.score ?? '—'}</strong></td>
+                      <td className="muted" style={{ maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.feedback}</td>
+                      <td><button className="btn btn-ghost" style={{ padding: '4px 10px', fontSize: 'var(--text-xs)' }} onClick={ev => { ev.stopPropagation(); setEvalModal(e); }}>View</button></td>
                     </tr>
                   );
                 })}
@@ -246,6 +338,15 @@ function CompanyDashboard({ problems, evaluations, users, loading, error, onRefr
           candidates={candidates}
           onClose={() => setAssignModal(null)}
           onAssigned={onRefresh}
+        />
+      )}
+
+      {evalModal && (
+        <EvaluationModal
+          evaluation={evalModal}
+          users={users}
+          problems={problems}
+          onClose={() => setEvalModal(null)}
         />
       )}
     </div>

@@ -701,7 +701,8 @@ textarea.input { height: auto; padding: 10px 12px; resize: vertical; }
 .bubble-row-user { justify-content: flex-end; }
 
 .bubble {
-  max-width: 80%;
+  max-width: 85%;
+  min-width: 0;
   padding: 10px 14px;
   border-radius: 10px;
   font-size: var(--text-sm);
@@ -709,9 +710,88 @@ textarea.input { height: auto; padding: 10px 12px; resize: vertical; }
   display: flex;
   align-items: flex-start;
   gap: 8px;
+  overflow: hidden;
+}
+
+.bubble-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  width: 100%;
 }
 .bubble-ai   { background: var(--surface-2); color: var(--text); }
 .bubble-user { background: var(--accent);    color: #fff; }
+
+/* ── Code blocks in chat ───────────────────────────────────── */
+.msg-code-wrap {
+  margin: 8px 0 4px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #2a2a3e;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.msg-code-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #161625;
+  padding: 6px 12px;
+  border-bottom: 1px solid #2a2a3e;
+}
+
+.msg-code-lang {
+  font-size: 11px;
+  font-weight: 600;
+  color: #6b7aff;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-family: 'Fira Code', monospace;
+}
+
+.msg-code-copy {
+  font-size: 11px;
+  color: var(--muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: color 0.15s;
+}
+.msg-code-copy:hover { color: var(--text); }
+
+.msg-code-block {
+  background: #0d0d1a;
+  padding: 12px 14px;
+  margin: 0;
+  font-family: 'Fira Code', 'Courier New', monospace;
+  font-size: 13px;
+  line-height: 1.7;
+  overflow-x: auto;
+  white-space: pre;
+  color: #e2e8f0;
+}
+
+/* Syntax highlight tokens */
+.hl-kw      { color: #c792ea; font-weight: 600; }   /* keywords — purple */
+.hl-str     { color: #c3e88d; }                       /* strings  — green  */
+.hl-num     { color: #f78c6c; }                       /* numbers  — orange */
+.hl-comment { color: #546e7a; font-style: italic; }   /* comments — gray   */
+
+/* Inline code */
+.msg-inline-code {
+  background: #1e1e2e;
+  color: #89ddff;
+  font-family: 'Fira Code', monospace;
+  font-size: 0.88em;
+  padding: 1px 5px;
+  border-radius: 4px;
+  border: 1px solid #2e2e42;
+}
+
 
 .bubble-icon { color: var(--accent); flex-shrink: 0; }
 

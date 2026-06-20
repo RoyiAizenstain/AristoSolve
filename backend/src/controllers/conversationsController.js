@@ -1,4 +1,35 @@
+const Anthropic = require('@anthropic-ai/sdk');
 const { Conversation, Message, Problem, Evaluation } = require('../../models/index');
+
+const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+
+const EVAL_SYSTEM_PROMPT = `You are evaluating a technical interview on an AI-guided coding platform.
+The conversation includes the candidate's chat with an AI mentor AND their final code submission (marked as [Final submission]).
+
+Score the candidate on two main areas:
+
+1. AI NATIVENESS — how well they think alongside AI:
+- prompting: did they ask clear, focused questions to the AI?
+- criticalThinking: did they push back or reason independently rather than just accepting AI hints?
+- adaptability: did they recover and redirect when they went down wrong paths?
+
+2. CODE QUALITY — evaluate the final submitted code:
+- codeCorrectness: is the logic correct? Does it handle edge cases? Is the approach efficient?
+  Look at the [Final submission] block at the end of the conversation.
+
+Return ONLY valid JSON in this exact shape:
+{
+  "score": <overall 0-100, weighted: 50% AI nativeness + 50% code quality>,
+  "feedback": "<2-3 sentence overall assessment covering both thinking process and code quality>",
+  "thinkingAnalysis": "<2-3 sentence analysis of how they interacted with the AI mentor>",
+  "codeAnalysis": "<1-2 sentence assessment of the submitted code's correctness and efficiency>",
+  "dimensions": {
+    "prompting": <0-100>,
+    "criticalThinking": <0-100>,
+    "adaptability": <0-100>,
+    "codeCorrectness": <0-100>
+  }
+}`;
 
 const VALID_LANGUAGES = ['python', 'java', 'javascript'];
 
@@ -62,21 +93,67 @@ const update = async (req, res) => {
     const wasAlreadyEnded = !!conversation.endedAt;
     await conversation.update(req.body);
 
-    // Auto-create placeholder evaluation when conversation ends for the first time
+    // Auto-create AI evaluation when conversation ends for the first time
     if (req.body.endedAt && !wasAlreadyEnded) {
-      const problem = await Problem.findByPk(conversation.problemId);
+      const problem  = await Problem.findByPk(conversation.problemId);
       const existing = await Evaluation.findOne({ where: { conversationId: id } });
+
       if (!existing && problem) {
-        await Evaluation.create({
-          userId:           conversation.userId,
-          problemId:        conversation.problemId,
-          conversationId:   id,
-          companyId:        problem.createdBy,
-          score:            null,
-          feedback:         'Pending AI evaluation',
-          thinkingAnalysis: 'AI evaluation will be generated here in Phase 2.',
-          dimensions:       null,
-        });
+        try {
+          // Load full conversation history
+          const messages = await Message.findAll({
+            where: { conversationId: id },
+            order: [['sequenceNumber', 'ASC']],
+          });
+
+          const claudeMessages = messages.map(m => ({
+            role:    m.role === 'assistant' ? 'assistant' : 'user',
+            content: m.content,
+          }));
+
+          // Call Claude Haiku to evaluate
+          const evalPromptNote = problem.evalPrompt
+            ? `\n\nCompany evaluation focus: ${problem.evalPrompt}`
+            : '';
+
+          const response = await anthropic.messages.create({
+            model:      'claude-haiku-4-5-20251001',
+            max_tokens: 600,
+            system:     EVAL_SYSTEM_PROMPT + evalPromptNote,
+            messages:   claudeMessages,
+          });
+
+          const raw = response.content[0].text;
+          const jsonMatch = raw.match(/\{[\s\S]*\}/);
+          const result = jsonMatch ? JSON.parse(jsonMatch[0]) : null;
+
+          await Evaluation.create({
+            userId:           conversation.userId,
+            problemId:        conversation.problemId,
+            conversationId:   id,
+            companyId:        problem.createdBy,
+            score:            result?.score ?? null,
+            feedback:         result?.feedback ?? 'Evaluation generated.',
+            thinkingAnalysis: result?.thinkingAnalysis ?? '',
+            dimensions:       {
+              ...result?.dimensions,
+              codeAnalysis: result?.codeAnalysis ?? '',
+            } ?? null,
+          });
+        } catch (evalErr) {
+          console.error('[eval] Claude evaluation failed:', evalErr.message);
+          // Fallback placeholder so the evaluation row still exists
+          await Evaluation.create({
+            userId:           conversation.userId,
+            problemId:        conversation.problemId,
+            conversationId:   id,
+            companyId:        problem.createdBy,
+            score:            null,
+            feedback:         'Evaluation could not be generated.',
+            thinkingAnalysis: '',
+            dimensions:       null,
+          });
+        }
       }
     }
 
