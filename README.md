@@ -295,7 +295,7 @@ When a candidate submits, the backend automatically calls Claude to evaluate the
 | Header-based auth | `x-user-role` and `x-user-id` headers simulate sessions. Not secure for production — JWT planned post-submission. |
 | No code execution | The textarea editor does not run code. Piston API integration planned post-submission. |
 | No Monaco editor | Plain `<textarea>` used for code. Monaco editor planned post-submission. |
-| No progress page | Candidate statistics page planned post-submission. |
+| No dedicated progress page | Assigned problems and their status are visible in the candidate dashboard ("Assigned to me" section). A full `/progress` route with history, statistics, and heatmap is planned post-submission. |
 | Anthropic API credits required | AristoBot falls back to canned replies when API balance is empty. Add credits at `console.anthropic.com`. |
 | Frontend port 5173, not 3000 | Assignment specifies port 3000 for frontend but backend already uses 3000. Frontend runs on 5173 to avoid collision. |
 | No real-time evaluation display | Evaluation appears on company dashboard after page refresh. WebSocket push for live evaluation not yet implemented. |

@@ -252,7 +252,7 @@ Frontend — Candidate Dashboard:
 |---|---|
 | Monaco editor | Replace `<textarea>` in ProblemDetail |
 | Piston live execution | Add Run button + Output tab |
-| Progress page | New page, `/api/progress` already exists |
+| Progress page | Dedicated `/progress` route with full history + statistics. Note: assigned progress IS already visible in the candidate dashboard "Assigned to me" section. `/api/progress` already exists. |
 | Evaluation report page | Candidate sees their AI nativeness score |
 | JWT real auth | Replace header-based mock auth |
 | **Timed multi-question test assignment** | See design below |
