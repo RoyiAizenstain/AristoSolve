@@ -4,17 +4,6 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Commands
 
-### Phase 1 (current structure)
-```bash
-# Backend (port 3000)
-npm start
-npm run dev
-
-# Frontend (port 5173)
-cd client && npm start
-```
-
-### Phase 2 (after folder restructure — Assignment 4)
 ```bash
 # Backend (port 3000)
 cd backend && npm start
@@ -39,9 +28,11 @@ Traditional technical interviews test whether someone can write an algorithm fro
 **What makes it different from LeetCode/NeetCode:** The conversation IS the evaluation artifact. Companies define what "AI native" means for their context via a custom eval prompt. The score reflects how a candidate thinks, not just what they output.
 
 - Runtime: Node.js + Express (backend) + Create React App (frontend, NOT Vite)
+- Database: MySQL 8.4 via Sequelize ORM
+- AI: Anthropic Claude Haiku (`claude-haiku-4-5-20251001`) via `@anthropic-ai/sdk`
+- Real-time: Socket.IO for AristoBot chat and 2-tab sync
 - Backend port: 3000 — Base URL: `http://localhost:3000`
 - Frontend port: 5173 — set via `PORT=5173` in `frontend/package.json`
-- Assignment 3: in-memory mock data only, no database
 
 ---
 
@@ -58,7 +49,7 @@ All Phase 1 items are implemented and working.
 - Navbar with dark/light theme toggle (sun/moon icon), 🤖 branding
 - Footer, Layout, RequireAuth, RequireRole guards
 - Dashboard — role-aware (candidate / company / admin — 3 separate views)
-- ProblemDetail — 3-panel layout (description | code+tests | AristoBot), `<textarea>` for code, Tab key inserts 4 spaces, mocked AI replies, language selector with per-problem starter code
+- ProblemDetail — 3-panel layout (description | code+tests | AristoBot), `<textarea>` for code, Tab key inserts 4 spaces, language selector with per-problem starter code, mocked AI replies (upgraded to real Claude in Phase 2)
 - Settings page — display name, email, theme, email notifications; theme persists and syncs with Navbar
 - Add Problem / Edit Problem pages (admin + company)
 - Users Management page (admin: CRUD with modal + inline delete confirm, last-admin protection)
@@ -74,11 +65,9 @@ All Phase 1 items are implemented and working.
 - SSE streaming for AristoBot
 - MySQL / real auth
 
-### Phase 2 — Assignment 4 (next)
+### Phase 2 — Assignment 4 (COMPLETE ✅)
 
-Each feature is **additive** — nothing from Phase 1 gets rewritten, only extended.
-
-**Always check which phase is active before adding any feature.**
+All Phase 2 items are implemented and working. Each feature was additive — nothing from Phase 1 was rewritten.
 
 #### Step 0 — Folder Restructure (A4 Required Structure) `~30 min`
 
@@ -231,12 +220,12 @@ Return JSON: { score, feedback, thinkingAnalysis, dimensions: { prompting, criti
 
 #### Part 4 — Documentation (10% of A4 grade)
 
-| Item | Content |
-|---|---|
-| `README.md` | Purpose, install, DB setup, env vars, ORM setup, API endpoints, WebSocket feature, AI feature, known limitations |
-| `.env.example` | All required keys, no real values |
-| Screenshots | DB tables, CRUD op, ORM relationship, 2 Socket.IO tabs, AI input/output, migrations |
-| Demo video | Required for submission |
+| Item | Status | Content |
+|---|---|---|
+| `README.md` | ❌ In progress | Purpose, install, DB setup, env vars, ORM setup, API endpoints, WebSocket feature, AI feature, known limitations |
+| `.env.example` | ✅ Done | `backend/.env.example` with all required keys, no real values |
+| Screenshots | ❌ You take these | DB tables, CRUD op, ORM relationship, 2 Socket.IO tabs, AI input/output, migrations |
+| Demo video | ❌ You record this | Required for submission |
 
 #### Part 1b — Test Assignment Feature (Part of MySQL phase) ✅
 
@@ -314,26 +303,36 @@ The codebase follows a strict three-layer separation:
 ```
 frontend/src/
 ├── App.js                 ← React Router v7, RequireAuth/RequireRole guards
-├── index.css              ← CSS custom properties for dark + light theme
+├── index.css              ← design tokens, dark + light theme, all component styles
 ├── services/
 │   ├── api.js             ← fetch wrapper, auto-attaches x-user-role + x-user-id
 │   ├── auth.js            ← login (fetches settings + applies theme), logout, getMe
 │   ├── problems.js        ← listProblems, getProblem, createProblem, updateProblem, deleteProblem
-│   ├── conversations.js
-│   ├── messages.js
-│   └── settings.js
+│   ├── conversations.js   ← createConversation, endConversation
+│   ├── messages.js        ← sendMessage
+│   └── settings.js        ← getSettings, updateSettings
 ├── components/
 │   ├── Navbar.jsx         ← theme toggle (localStorage + data-theme), 🤖 brand
+│   ├── Footer.jsx
+│   ├── Layout.jsx         ← Navbar + main content + Footer
 │   ├── PageLoader.jsx     ← spinner used for all async operations
+│   ├── RequireAuth.jsx    ← redirect to /login if no localStorage user
 │   ├── RequireRole.jsx    ← redirects if user's role not in allowed list
+│   ├── StatCard.jsx       ← reusable feature card (icon + title + description)
+│   ├── MessageBubble.jsx  ← chat bubble with syntax-highlighted code blocks + copy button
+│   ├── ProblemsTable.jsx  ← problems data table with solved status
+│   ├── DifficultyPill.jsx ← colored difficulty badge (easy/medium/hard)
+│   ├── Toast.jsx          ← success/error notification, fixed bottom-right, 3s auto-dismiss
 │   └── …
 └── pages/
+    ├── Login.jsx          ← email + password, validation, theme apply on success
+    ├── Register.jsx       ← name + email + password + role (candidate/company)
     ├── Dashboard.jsx      ← CandidateDashboard / CompanyDashboard / AdminDashboard
-    ├── ProblemDetail.jsx  ← 3-panel layout, mocked AristoBot, starter code
+    ├── ProblemDetail.jsx  ← 3-panel layout, Socket.IO AristoBot, real Claude responses, chat history
     ├── AddProblem.jsx     ← create problem form (admin + company)
     ├── EditProblem.jsx    ← edit problem form (admin + company)
     ├── UsersPage.jsx      ← admin CRUD + modal + last-admin guard
-    └── Settings.jsx       ← theme radio syncs with Navbar
+    └── Settings.jsx       ← 4 fields, theme radio syncs with Navbar
 ```
 
 ### Auth middleware pattern
@@ -351,7 +350,9 @@ frontend/src/
 
 ### Model layer pattern
 
-Each model file exports the in-memory array, a `nextId` counter, and helpers: `findAll`, `findById`, `create`, `update`, `remove`. IDs are numeric auto-incremented. Data resets on server restart.
+**Phase 2 (current):** Sequelize ORM models in `backend/models/`. Each model maps to a MySQL table. Controllers use async Sequelize queries (`findAll`, `findByPk`, `create`, `update`, `destroy`). Data persists after server restart.
+
+**Legacy (Phase 1):** In-memory arrays remain in `backend/models/legacy/` for reference only — not used by any active controller.
 
 ---
 
@@ -485,7 +486,12 @@ Special rules:
 
 ---
 
-## Out of Scope (Phase 1 — now complete)
+## Out of Scope (Phase 2 — now complete)
 
-The following were out of scope for Assignment 3 and are now targets for Phase 2 (Assignment 4):
-MySQL, real AI chat (Claude API), Socket.IO, JWT/password auth, Monaco editor, Piston live execution, Progress page, evaluation report page.
+The following are deferred post-submission good-to-have features:
+- Monaco editor (replace `<textarea>` in ProblemDetail)
+- Piston live code execution (Run button + Output tab)
+- Progress page (route + UI for candidate progress statistics)
+- Evaluation report page (candidate views their own AI nativeness score)
+- JWT real auth (replace header-based mock auth with bcrypt + JWT)
+- Timed multi-question test assignment (see design in CLAUDE.md "Good to Have")
