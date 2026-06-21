@@ -1,27 +1,58 @@
 {
   "info": {
     "name": "AristoSolve",
+    "description": "AristoSolve API — AI-guided coding interview platform. All routes are under /api. Use x-user-role and x-user-id headers to simulate authentication.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
     {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "POST login (candidate)",
+          "request": {
+            "method": "POST",
+            "url": "http://localhost:3000/api/auth/login",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"email\":\"carol@example.com\",\"password\":\"candidate123\"}" }
+          }
+        },
+        {
+          "name": "POST login (company)",
+          "request": {
+            "method": "POST",
+            "url": "http://localhost:3000/api/auth/login",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"email\":\"bob@example.com\",\"password\":\"company123\"}" }
+          }
+        },
+        {
+          "name": "POST login (admin)",
+          "request": {
+            "method": "POST",
+            "url": "http://localhost:3000/api/auth/login",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"email\":\"alice@example.com\",\"password\":\"admin123\"}" }
+          }
+        },
+        {
+          "name": "POST logout",
+          "request": {
+            "method": "POST",
+            "url": "http://localhost:3000/api/auth/logout",
+            "header": []
+          }
+        }
+      ]
+    },
+    {
       "name": "Users",
       "item": [
         {
-          "name": "GET all users",
+          "name": "GET all users (admin)",
           "request": {
             "method": "GET",
-            "url": "http://localhost:3000/users",
-            "header": [
-              { "key": "x-user-role", "value": "admin" }
-            ]
-          }
-        },
-        {
-          "name": "GET user by ID (admin)",
-          "request": {
-            "method": "GET",
-            "url": "http://localhost:3000/users/2",
+            "url": "http://localhost:3000/api/users",
             "header": [
               { "key": "x-user-role", "value": "admin" },
               { "key": "x-user-id", "value": "1" }
@@ -29,10 +60,10 @@
           }
         },
         {
-          "name": "GET user by ID (own)",
+          "name": "GET /users/me",
           "request": {
             "method": "GET",
-            "url": "http://localhost:3000/users/3",
+            "url": "http://localhost:3000/api/users/me",
             "header": [
               { "key": "x-user-role", "value": "candidate" },
               { "key": "x-user-id", "value": "3" }
@@ -40,168 +71,156 @@
           }
         },
         {
-          "name": "POST create user",
+          "name": "GET user by ID",
+          "request": {
+            "method": "GET",
+            "url": "http://localhost:3000/api/users/3",
+            "header": [
+              { "key": "x-user-role", "value": "candidate" },
+              { "key": "x-user-id", "value": "3" }
+            ]
+          }
+        },
+        {
+          "name": "POST register user",
           "request": {
             "method": "POST",
-            "url": "http://localhost:3000/users",
-            "header": [
-              { "key": "Content-Type", "value": "application/json" }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"firstName\": \"Jane\",\n  \"lastName\": \"Doe\",\n  \"email\": \"jane@example.com\",\n  \"userRole\": \"candidate\",\n  \"level\": \"beginner\"\n}"
-            }
+            "url": "http://localhost:3000/api/users",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"firstName\":\"Test\",\"lastName\":\"User\",\"email\":\"test@example.com\",\"password\":\"test123\",\"userRole\":\"candidate\"}" }
           }
         },
         {
-          "name": "PUT update user (admin)",
+          "name": "PUT update user",
           "request": {
             "method": "PUT",
-            "url": "http://localhost:3000/users/3",
-            "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "x-user-role", "value": "admin" },
-              { "key": "x-user-id", "value": "1" }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"level\": \"intermediate\"\n}"
-            }
-          }
-        },
-        {
-          "name": "PUT update user (own)",
-          "request": {
-            "method": "PUT",
-            "url": "http://localhost:3000/users/3",
+            "url": "http://localhost:3000/api/users/3",
             "header": [
               { "key": "Content-Type", "value": "application/json" },
               { "key": "x-user-role", "value": "candidate" },
               { "key": "x-user-id", "value": "3" }
             ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"level\": \"advanced\"\n}"
-            }
+            "body": { "mode": "raw", "raw": "{\"firstName\":\"Carol Updated\"}" }
           }
         },
         {
-          "name": "DELETE user",
+          "name": "DELETE user (admin)",
           "request": {
             "method": "DELETE",
-            "url": "http://localhost:3000/users/5",
+            "url": "http://localhost:3000/api/users/5",
             "header": [
-              { "key": "x-user-role", "value": "admin" }
+              { "key": "x-user-role", "value": "admin" },
+              { "key": "x-user-id", "value": "1" }
             ]
           }
         }
       ]
-    }
-    ,{
+    },
+    {
       "name": "Problems",
       "item": [
         {
-          "name": "GET all problems",
+          "name": "GET all problems (admin — sees all)",
           "request": {
             "method": "GET",
-            "url": "http://localhost:3000/problems",
-            "header": []
+            "url": "http://localhost:3000/api/problems",
+            "header": [
+              { "key": "x-user-role", "value": "admin" },
+              { "key": "x-user-id", "value": "1" }
+            ]
           }
         },
         {
-          "name": "GET problems (filter by difficulty)",
+          "name": "GET all problems (candidate — public only)",
           "request": {
             "method": "GET",
-            "url": "http://localhost:3000/problems?difficulty=easy",
-            "header": []
+            "url": "http://localhost:3000/api/problems",
+            "header": [
+              { "key": "x-user-role", "value": "candidate" },
+              { "key": "x-user-id", "value": "3" }
+            ]
           }
         },
         {
-          "name": "GET problems (filter by topic)",
+          "name": "GET problems filtered by difficulty",
           "request": {
             "method": "GET",
-            "url": "http://localhost:3000/problems?topic=strings",
-            "header": []
+            "url": "http://localhost:3000/api/problems?difficulty=easy",
+            "header": [
+              { "key": "x-user-role", "value": "admin" },
+              { "key": "x-user-id", "value": "1" }
+            ]
           }
         },
         {
           "name": "GET problem by ID",
           "request": {
             "method": "GET",
-            "url": "http://localhost:3000/problems/1",
-            "header": []
+            "url": "http://localhost:3000/api/problems/3",
+            "header": [
+              { "key": "x-user-role", "value": "candidate" },
+              { "key": "x-user-id", "value": "3" }
+            ]
           }
         },
         {
-          "name": "POST create problem",
+          "name": "POST create problem (company)",
           "request": {
             "method": "POST",
-            "url": "http://localhost:3000/problems",
+            "url": "http://localhost:3000/api/problems",
             "header": [
               { "key": "Content-Type", "value": "application/json" },
               { "key": "x-user-role", "value": "company" },
               { "key": "x-user-id", "value": "2" }
             ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"title\": \"Contains Duplicate\",\n  \"difficulty\": \"easy\",\n  \"topic\": \"arrays\",\n  \"type\": \"algorithm\",\n  \"description\": \"Given an integer array nums, return true if any value appears at least twice.\",\n  \"constraints\": \"1 <= nums.length <= 10^5\",\n  \"examples\": [{\"input\": \"nums = [1,2,3,1]\", \"output\": \"true\"}],\n  \"evalPrompt\": \"Reward hash set solution. Penalize sorting approach.\",\n  \"isPublic\": false\n}"
-            }
+            "body": { "mode": "raw", "raw": "{\"title\":\"New Problem\",\"difficulty\":\"easy\",\"topic\":\"arrays\",\"type\":\"algorithm\",\"description\":\"Solve this problem.\",\"isPublic\":false,\"evalPrompt\":\"Focus on time complexity.\"}" }
           }
         },
         {
-          "name": "PUT update problem",
+          "name": "PUT update problem (company — own)",
           "request": {
             "method": "PUT",
-            "url": "http://localhost:3000/problems/1",
+            "url": "http://localhost:3000/api/problems/1",
             "header": [
               { "key": "Content-Type", "value": "application/json" },
-              { "key": "x-user-role", "value": "admin" }
+              { "key": "x-user-role", "value": "company" },
+              { "key": "x-user-id", "value": "2" }
             ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"difficulty\": \"medium\"\n}"
-            }
+            "body": { "mode": "raw", "raw": "{\"title\":\"Two Sum (Updated)\"}" }
           }
         },
         {
-          "name": "DELETE problem",
+          "name": "DELETE problem (admin)",
           "request": {
             "method": "DELETE",
-            "url": "http://localhost:3000/problems/5",
-            "header": [
-              { "key": "x-user-role", "value": "admin" }
-            ]
-          }
-        }
-      ]
-    }
-    ,{
-      "name": "Conversations",
-      "item": [
-        {
-          "name": "GET all conversations",
-          "request": {
-            "method": "GET",
-            "url": "http://localhost:3000/conversations",
-            "header": [{ "key": "x-user-role", "value": "admin" }]
-          }
-        },
-        {
-          "name": "GET conversation by ID (admin)",
-          "request": {
-            "method": "GET",
-            "url": "http://localhost:3000/conversations/1",
+            "url": "http://localhost:3000/api/problems/1",
             "header": [
               { "key": "x-user-role", "value": "admin" },
               { "key": "x-user-id", "value": "1" }
             ]
           }
-        },
+        }
+      ]
+    },
+    {
+      "name": "Conversations",
+      "item": [
         {
-          "name": "GET conversation by ID (own)",
+          "name": "GET conversations for problem (candidate)",
           "request": {
             "method": "GET",
-            "url": "http://localhost:3000/conversations/1",
+            "url": "http://localhost:3000/api/conversations?problemId=3",
+            "header": [
+              { "key": "x-user-role", "value": "candidate" },
+              { "key": "x-user-id", "value": "3" }
+            ]
+          }
+        },
+        {
+          "name": "GET conversation by ID with messages",
+          "request": {
+            "method": "GET",
+            "url": "http://localhost:3000/api/conversations/1",
             "header": [
               { "key": "x-user-role", "value": "candidate" },
               { "key": "x-user-id", "value": "3" }
@@ -212,61 +231,51 @@
           "name": "POST start conversation",
           "request": {
             "method": "POST",
-            "url": "http://localhost:3000/conversations",
+            "url": "http://localhost:3000/api/conversations",
             "header": [
               { "key": "Content-Type", "value": "application/json" },
-              { "key": "x-user-role", "value": "candidate" }
+              { "key": "x-user-role", "value": "candidate" },
+              { "key": "x-user-id", "value": "3" }
             ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"userId\": 3,\n  \"problemId\": 2,\n  \"language\": \"python\"\n}"
-            }
+            "body": { "mode": "raw", "raw": "{\"userId\":3,\"problemId\":3,\"language\":\"python\"}" }
           }
         },
         {
-          "name": "PUT end conversation",
+          "name": "PUT end conversation (triggers AI evaluation)",
           "request": {
             "method": "PUT",
-            "url": "http://localhost:3000/conversations/2",
+            "url": "http://localhost:3000/api/conversations/1",
             "header": [
               { "key": "Content-Type", "value": "application/json" },
-              { "key": "x-user-role", "value": "admin" }
+              { "key": "x-user-role", "value": "candidate" },
+              { "key": "x-user-id", "value": "3" }
             ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"endedAt\": \"2024-02-02T15:00:00Z\"\n}"
-            }
+            "body": { "mode": "raw", "raw": "{\"endedAt\":\"2026-06-21T12:00:00Z\"}" }
           }
         },
         {
-          "name": "DELETE conversation",
+          "name": "POST send message",
           "request": {
-            "method": "DELETE",
-            "url": "http://localhost:3000/conversations/5",
-            "header": [{ "key": "x-user-role", "value": "admin" }]
+            "method": "POST",
+            "url": "http://localhost:3000/api/conversations/1/messages",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "x-user-role", "value": "candidate" },
+              { "key": "x-user-id", "value": "3" }
+            ],
+            "body": { "mode": "raw", "raw": "{\"role\":\"user\",\"content\":\"What is a hash map?\"}" }
           }
         }
       ]
     },
     {
-      "name": "Messages",
+      "name": "Progress (Assignments)",
       "item": [
         {
-          "name": "GET messages (admin)",
+          "name": "GET my progress (candidate)",
           "request": {
             "method": "GET",
-            "url": "http://localhost:3000/conversations/1/messages",
-            "header": [
-              { "key": "x-user-role", "value": "admin" },
-              { "key": "x-user-id", "value": "1" }
-            ]
-          }
-        },
-        {
-          "name": "GET messages (own)",
-          "request": {
-            "method": "GET",
-            "url": "http://localhost:3000/conversations/1/messages",
+            "url": "http://localhost:3000/api/progress",
             "header": [
               { "key": "x-user-role", "value": "candidate" },
               { "key": "x-user-id", "value": "3" }
@@ -274,41 +283,29 @@
           }
         },
         {
-          "name": "POST send message",
+          "name": "POST assign problem to candidate (company)",
           "request": {
             "method": "POST",
-            "url": "http://localhost:3000/conversations/1/messages",
+            "url": "http://localhost:3000/api/progress",
             "header": [
               { "key": "Content-Type", "value": "application/json" },
-              { "key": "x-user-role", "value": "candidate" }
+              { "key": "x-user-role", "value": "company" },
+              { "key": "x-user-id", "value": "2" }
             ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"role\": \"user\",\n  \"content\": \"I think I can use a hash map to solve this.\"\n}"
-            }
+            "body": { "mode": "raw", "raw": "{\"userId\":3,\"problemId\":1,\"status\":\"in_progress\",\"deadline\":\"2026-07-01\"}" }
           }
         },
         {
-          "name": "PUT edit message",
+          "name": "PUT mark progress completed",
           "request": {
             "method": "PUT",
-            "url": "http://localhost:3000/conversations/1/messages/1",
+            "url": "http://localhost:3000/api/progress/1",
             "header": [
               { "key": "Content-Type", "value": "application/json" },
-              { "key": "x-user-role", "value": "admin" }
+              { "key": "x-user-role", "value": "candidate" },
+              { "key": "x-user-id", "value": "3" }
             ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"content\": \"Updated message content.\"\n}"
-            }
-          }
-        },
-        {
-          "name": "DELETE message",
-          "request": {
-            "method": "DELETE",
-            "url": "http://localhost:3000/conversations/1/messages/1",
-            "header": [{ "key": "x-user-role", "value": "admin" }]
+            "body": { "mode": "raw", "raw": "{\"status\":\"completed\"}" }
           }
         }
       ]
@@ -317,80 +314,37 @@
       "name": "Evaluations",
       "item": [
         {
-          "name": "GET all evaluations",
+          "name": "GET evaluations (company — sees own candidates)",
           "request": {
             "method": "GET",
-            "url": "http://localhost:3000/evaluations",
-            "header": [{ "key": "x-user-role", "value": "admin" }]
-          }
-        },
-        {
-          "name": "GET evaluation by ID (own)",
-          "request": {
-            "method": "GET",
-            "url": "http://localhost:3000/evaluations/1",
+            "url": "http://localhost:3000/api/evaluations",
             "header": [
-              { "key": "x-user-role", "value": "candidate" },
-              { "key": "x-user-id", "value": "3" }
+              { "key": "x-user-role", "value": "company" },
+              { "key": "x-user-id", "value": "2" }
             ]
           }
         },
         {
-          "name": "POST create evaluation",
+          "name": "GET evaluations (admin — sees all)",
           "request": {
-            "method": "POST",
-            "url": "http://localhost:3000/evaluations",
+            "method": "GET",
+            "url": "http://localhost:3000/api/evaluations",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "x-user-role", "value": "admin" }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"userId\": 3,\n  \"problemId\": 2,\n  \"conversationId\": 2,\n  \"score\": 88,\n  \"feedback\": \"Great use of sorted key grouping.\",\n  \"thinkingAnalysis\": \"Candidate independently identified the optimal approach.\"\n}"
-            }
-          }
-        },
-        {
-          "name": "PUT update evaluation",
-          "request": {
-            "method": "PUT",
-            "url": "http://localhost:3000/evaluations/1",
-            "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "x-user-role", "value": "admin" }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"score\": 90,\n  \"feedback\": \"Revised after review.\"\n}"
-            }
-          }
-        },
-        {
-          "name": "DELETE evaluation",
-          "request": {
-            "method": "DELETE",
-            "url": "http://localhost:3000/evaluations/4",
-            "header": [{ "key": "x-user-role", "value": "admin" }]
+              { "key": "x-user-role", "value": "admin" },
+              { "key": "x-user-id", "value": "1" }
+            ]
           }
         }
       ]
     },
     {
-      "name": "Progress",
+      "name": "Settings",
       "item": [
         {
-          "name": "GET all progress",
+          "name": "GET settings",
           "request": {
             "method": "GET",
-            "url": "http://localhost:3000/progress",
-            "header": [{ "key": "x-user-role", "value": "admin" }]
-          }
-        },
-        {
-          "name": "GET progress by ID (own)",
-          "request": {
-            "method": "GET",
-            "url": "http://localhost:3000/progress/1",
+            "url": "http://localhost:3000/api/settings",
             "header": [
               { "key": "x-user-role", "value": "candidate" },
               { "key": "x-user-id", "value": "3" }
@@ -398,42 +352,16 @@
           }
         },
         {
-          "name": "POST create progress",
-          "request": {
-            "method": "POST",
-            "url": "http://localhost:3000/progress",
-            "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "x-user-role", "value": "candidate" }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"userId\": 3,\n  \"problemId\": 4,\n  \"status\": \"in_progress\"\n}"
-            }
-          }
-        },
-        {
-          "name": "PUT update progress (own)",
+          "name": "PUT update settings",
           "request": {
             "method": "PUT",
-            "url": "http://localhost:3000/progress/2",
+            "url": "http://localhost:3000/api/settings",
             "header": [
               { "key": "Content-Type", "value": "application/json" },
               { "key": "x-user-role", "value": "candidate" },
               { "key": "x-user-id", "value": "3" }
             ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"status\": \"completed\"\n}"
-            }
-          }
-        },
-        {
-          "name": "DELETE progress",
-          "request": {
-            "method": "DELETE",
-            "url": "http://localhost:3000/progress/5",
-            "header": [{ "key": "x-user-role", "value": "admin" }]
+            "body": { "mode": "raw", "raw": "{\"displayName\":\"Carol Chen\",\"theme\":\"dark\",\"emailNotifications\":true}" }
           }
         }
       ]
