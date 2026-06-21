@@ -64,7 +64,9 @@ const update = async (req, res) => {
   try {
     const user = await User.findByPk(id);
     if (!user) return fail(res, 404, 'NOT_FOUND', `User ${id} not found`);
-    await user.update(req.body);
+    const updates = { ...req.body };
+    if (!updates.password) delete updates.password; // never overwrite with empty string
+    await user.update(updates);
     const { password: _, ...safe } = user.toJSON();
     ok(res, safe);
   } catch (e) { fail(res, 500, 'INTERNAL_ERROR', e.message); }

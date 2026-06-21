@@ -81,6 +81,7 @@ export default function AddProblem() {
               className={`input${errors.title ? ' invalid' : ''}`}
               value={form.title}
               onChange={e => set('title', e.target.value)}
+              id="problem-title"
               placeholder="e.g. Two Sum"
             />
             {errors.title && <p className="error-text">⚠ {errors.title}</p>}

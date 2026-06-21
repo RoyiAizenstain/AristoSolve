@@ -15,12 +15,17 @@ const sequelize = new Sequelize(
 );
 
 const User         = require('./User')(sequelize);
+const Admin        = require('./Admin')(sequelize);
 const Problem      = require('./Problem')(sequelize);
 const Conversation = require('./Conversation')(sequelize);
 const Message      = require('./Message')(sequelize);
 const Progress     = require('./Progress')(sequelize);
 const Evaluation   = require('./Evaluation')(sequelize);
 const Settings     = require('./Settings')(sequelize);
+
+// one-to-one: User → Admin (admin profile extension)
+User.hasOne(Admin,  { foreignKey: 'userId' });
+Admin.belongsTo(User, { foreignKey: 'userId' });
 
 // one-to-many: User → Conversations
 User.hasMany(Conversation,  { foreignKey: 'userId' });
@@ -54,4 +59,4 @@ Evaluation.belongsTo(User, { foreignKey: 'userId' });
 User.hasOne(Settings,  { foreignKey: 'userId' });
 Settings.belongsTo(User, { foreignKey: 'userId' });
 
-module.exports = { sequelize, User, Problem, Conversation, Message, Progress, Evaluation, Settings };
+module.exports = { sequelize, User, Admin, Problem, Conversation, Message, Progress, Evaluation, Settings };

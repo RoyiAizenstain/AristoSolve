@@ -35,8 +35,10 @@ const update = async (req, res) => {
   if (email !== undefined && !EMAIL_RE.test(email)) return fail(res, 400, 'VALIDATION_ERROR', 'email must be a valid email address');
   if (theme !== undefined && !VALID_THEMES.includes(theme)) return fail(res, 400, 'VALIDATION_ERROR', `theme must be one of: ${VALID_THEMES.join(', ')}`);
   try {
-    const [, [record]] = await Settings.upsert({ userId, ...req.body }, { returning: true });
-    ok(res, record || await Settings.findOne({ where: { userId } }));
+    // MySQL upsert doesn't return records — upsert then fetch
+    await Settings.upsert({ userId, ...req.body });
+    const record = await Settings.findOne({ where: { userId } });
+    ok(res, record);
   } catch (e) { fail(res, 500, 'INTERNAL_ERROR', e.message); }
 };
 

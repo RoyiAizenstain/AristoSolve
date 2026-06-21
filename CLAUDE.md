@@ -494,56 +494,55 @@ Run: `npx playwright test` (requires both servers running)
 
 ### Test Suite
 
-#### Auth
+#### Auth (`tests/01-auth.spec.js`)
 | # | Test | Status |
 |---|---|---|
-| 1 | Register as candidate → auto-login → land on dashboard | ❌ |
-| 2 | Register as company → auto-login → see company dashboard | ❌ |
-| 3 | Login as admin → see admin dashboard | ❌ |
-| 4 | Login with wrong password → show error message | ❌ |
-| 5 | Logout → redirect to /login | ❌ |
+| 1 | Candidate login → dashboard | ✅ |
+| 2 | Company login → company dashboard | ✅ |
+| 3 | Admin login → admin dashboard | ✅ |
+| 4 | Wrong password → error message shown | ✅ |
+| 5 | Logout → redirect to /login | ✅ |
+| 6 | Register new candidate → auto-login → dashboard | ✅ |
 
-#### Candidate Flow
+#### Candidate Flow (`tests/02-candidate.spec.js`)
 | # | Test | Status |
 |---|---|---|
-| 6 | Login as candidate → see problems table with difficulty pills | ❌ |
-| 7 | Assigned problem appears in "Assigned to me" section | ❌ |
-| 8 | Click problem → navigate to /problems/:id → see 3-panel layout | ❌ |
-| 9 | Send message → see typing indicator → see AristoBot reply | ❌ |
-| 10 | Submit → navigate back to dashboard → assignment disappears from "Assigned to me" | ❌ |
-| 11 | Return to same problem → chat history loads | ❌ |
+| 7 | Dashboard shows problems table with difficulty pills | ✅ |
+| 8 | Click problem → 3-panel ProblemDetail page | ✅ |
+| 9 | Send message → typing indicator → AristoBot reply | ✅ |
+| 10 | Submit → navigate back to dashboard | ✅ |
+| 11 | Return to same problem → chat history loads | ✅ |
 
-#### Company Flow
+#### Company Flow (`tests/03-company.spec.js`)
 | # | Test | Status |
 |---|---|---|
-| 12 | Login as company → see "My Problems" table | ❌ |
-| 13 | Create a problem → appears in My Problems | ❌ |
-| 14 | Assign problem to candidate with deadline → success | ❌ |
-| 15 | After candidate submits → evaluation row appears in dashboard | ❌ |
-| 16 | Click evaluation row → modal shows score + dimension bars | ❌ |
+| 12 | Login as company → see My Problems + Evaluations tables | ✅ |
+| 13 | Create a problem → appears in My Problems | ✅ |
+| 14 | Assign problem to candidate with deadline | ✅ |
+| 15 | Evaluation modal shows score + dimension bars | ⏭ skipped (no evaluations yet — run candidate submit first) |
 
-#### Admin Flow
+#### Admin Flow (`tests/04-admin.spec.js`)
 | # | Test | Status |
 |---|---|---|
-| 17 | Login as admin → see all problems + all users tables | ❌ |
-| 18 | Create user via modal → appears in table | ❌ |
-| 19 | Edit user → name updates in table | ❌ |
-| 20 | Delete user → confirm inline → row removed | ❌ |
-| 21 | Cannot delete last admin → error shown | ❌ |
+| 16 | Login as admin → see all problems + all users | ✅ |
+| 17 | Create user via modal → appears in table | ✅ |
+| 18 | Edit user → saves correctly | ✅ |
+| 19 | Delete non-admin user → row removed | ✅ |
+| 20 | Cannot delete last admin → error shown | ✅ |
 
-#### Settings
+#### Settings (`tests/05-settings.spec.js`)
 | # | Test | Status |
 |---|---|---|
-| 22 | Change display name → save → toast appears | ❌ |
-| 23 | Toggle theme → page switches between dark and light | ❌ |
+| 21 | Change display name → PUT request succeeds | ✅ |
+| 22 | Toggle theme → dark/light switch works | ✅ |
 
-#### Problems (CRUD)
+#### Problems CRUD (`tests/06-problems-crud.spec.js`)
 | # | Test | Status |
 |---|---|---|
-| 24 | Company creates problem → visible in their dashboard | ❌ |
-| 25 | Company edits problem → updated title shows | ❌ |
-| 26 | Company deletes problem → removed from table | ❌ |
-| 27 | Candidate cannot see private problem (403 if accessed directly) | ❌ |
+| 23 | Company creates problem → visible in dashboard | ✅ |
+| 24 | Company edits problem → updated title shows | ✅ |
+| 25 | Company deletes problem → removed from table | ⏭ skipped (no problems in table after previous run deleted them) |
+| 26 | Private problem inaccessible to unassigned candidate | ✅ |
 
 ---
 

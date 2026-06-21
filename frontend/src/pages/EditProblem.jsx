@@ -78,6 +78,7 @@ export default function EditProblem() {
           <div className="field">
             <label className="label">Title</label>
             <input
+              id="problem-title"
               type="text"
               className={`input${errors.title ? ' invalid' : ''}`}
               value={form.title}
