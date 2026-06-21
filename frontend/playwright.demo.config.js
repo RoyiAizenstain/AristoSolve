@@ -2,13 +2,14 @@ const { defineConfig } = require('@playwright/test');
 
 module.exports = defineConfig({
   testDir: './tests',
-  timeout: 30000,
-  retries: 1,
+  timeout: 120000,
+  retries: 0,
   use: {
     baseURL: 'http://localhost:5173',
     headless: false,
-    screenshot: 'only-on-failure',
-    video: 'retain-on-failure',
+    video: 'on',
+    viewport: { width: 1280, height: 720 },
   },
-  reporter: [['list'], ['html', { open: 'never' }]],
+  reporter: [['list']],
+  outputDir: './demo-output',
 });

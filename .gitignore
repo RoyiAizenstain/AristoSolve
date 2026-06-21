@@ -40,6 +40,13 @@ $RECYCLE.BIN/
 .playwright-mcp/
 frontend/playwright-report/
 frontend/test-results/
+frontend/demo-output/
 
 # Claude Code
 .claude/settings.local.json
+
+# Archives / zip files
+*.zip
+
+# AristoSolve specific
+AristoSolve.zip
