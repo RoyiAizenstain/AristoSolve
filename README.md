@@ -76,15 +76,16 @@ sequelize.sync({ force: false }).then(() => {
 "
 ```
 
-### 4. Seed the database (5 users + 5 problems)
+### 4. Seed the database (5 users + 5 problems + admin record)
 ```bash
 node -e "
 require('dotenv').config();
 const { sequelize } = require('./models/index');
 const userSeeder    = require('./seeders/01-users');
 const problemSeeder = require('./seeders/02-problems');
+const adminSeeder   = require('./seeders/03-admins');
 const qi = sequelize.getQueryInterface();
-userSeeder.up(qi).then(() => problemSeeder.up(qi)).then(() => {
+userSeeder.up(qi).then(() => problemSeeder.up(qi)).then(() => adminSeeder.up(qi)).then(() => {
   console.log('Database seeded');
   process.exit(0);
 });
@@ -124,6 +125,7 @@ AristoSolve uses **Sequelize** to map JavaScript models to MySQL tables.
 | Model | Table | Purpose |
 |---|---|---|
 | `User` | `users` | All roles: admin, company, candidate |
+| `Admin` | `admins` | Admin profile extension — one-to-one with User; tracks `isSuperAdmin` flag |
 | `Problem` | `problems` | Coding problems with starter code and test cases |
 | `Conversation` | `conversations` | A candidate's session on a problem |
 | `Message` | `messages` | Individual chat messages within a conversation |
@@ -133,6 +135,9 @@ AristoSolve uses **Sequelize** to map JavaScript models to MySQL tables.
 
 ### ORM Relationships
 
+**One-to-one:**
+- `User` → `Admin` (admin profile extension)
+
 **One-to-many:**
 - `User` → `Conversations`
 - `User` → `Progress`
@@ -140,9 +145,6 @@ AristoSolve uses **Sequelize** to map JavaScript models to MySQL tables.
 
 **Many-to-many:**
 - `User` ↔ `Problem` via `Progress` (junction table)
-
-### Admin Model Note
-Admin is not a separate table — it is a `User` record where `userRole = 'admin'`. Admin-specific business logic is in `usersController.js` (last-admin protection on delete).
 
 ---
 

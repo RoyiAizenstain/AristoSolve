@@ -124,17 +124,18 @@ Goal: replace all in-memory arrays with a real MySQL database so data persists a
 |---|---|
 | 1 | ✅ Install `sequelize`, `mysql2`, `sequelize-cli` |
 | 2 | ✅ Create `.env` — `DB_HOST`, `DB_USER`, `DB_PASS`, `DB_NAME` |
-| 3 | ✅ Write Sequelize models: User, Problem, Conversation, Message, Progress, Evaluation, Settings |
+| 3 | ✅ Write Sequelize models: User, Admin, Problem, Conversation, Message, Progress, Evaluation, Settings |
 | 4 | ✅ Write migrations in `backend/migrations/` — one file per table |
 | 5 | ✅ Write seeders — 5 users + 5 problems |
 | 6 | ✅ Swap all controllers from in-memory helpers → Sequelize queries |
 | 7 | ✅ Add at least one JOIN query (Progress + User + Problem for company dashboard) |
 
 Required ORM relationships (A4 requires one-to-many AND many-to-many):
+- one-to-one: `User` → `Admin` (admin profile extension table)
 - one-to-many: `User` → `Conversations`, `User` → `Progress`
 - many-to-many: `User` ↔ `Problem` via `Progress` (junction table)
 
-**Note on Admin model (A4 requirement):** Assignment 4 lists "Admin" as a required model. In AristoSolve, Admin is NOT a separate table — it is a `User` record where `userRole = 'admin'`. The Sequelize `User` model covers this. When graders ask about the Admin model, point to `User` with the `userRole` enum and the last-admin protection logic in the delete controller.
+**Admin model (A4 requirement):** `backend/models/Admin.js` maps to the `admins` table — a one-to-one extension of `User` that holds `isSuperAdmin`. Migration: `backend/migrations/08-create-admins.js`. Seeder: `backend/seeders/03-admins.js` (seeds Alice as super-admin). The `userRole = 'admin'` enum on `User` still drives access control; the `admins` table holds admin-specific profile data.
 
 #### .env.example (required for A4 submission)
 
@@ -222,7 +223,7 @@ Return JSON: { score, feedback, thinkingAnalysis, dimensions: { prompting, criti
 
 | Item | Status | Content |
 |---|---|---|
-| `README.md` | ❌ In progress | Purpose, install, DB setup, env vars, ORM setup, API endpoints, WebSocket feature, AI feature, known limitations |
+| `README.md` | ✅ Done | Purpose, install, DB setup, env vars, ORM setup, API endpoints, WebSocket feature, AI feature, known limitations |
 | `.env.example` | ✅ Done | `backend/.env.example` with all required keys, no real values |
 | Screenshots | ❌ You take these | DB tables, CRUD op, ORM relationship, 2 Socket.IO tabs, AI input/output, migrations |
 | Demo video | ❌ You record this | Required for submission |
@@ -350,7 +351,7 @@ frontend/src/
 
 ### Model layer pattern
 
-**Phase 2 (current):** Sequelize ORM models in `backend/models/`. Each model maps to a MySQL table. Controllers use async Sequelize queries (`findAll`, `findByPk`, `create`, `update`, `destroy`). Data persists after server restart.
+**Phase 2 (current):** Sequelize ORM models in `backend/models/`. Models: User, Admin, Problem, Conversation, Message, Progress, Evaluation, Settings. Each model maps to a MySQL table. Controllers use async Sequelize queries (`findAll`, `findByPk`, `create`, `update`, `destroy`). Data persists after server restart.
 
 **Legacy (Phase 1):** In-memory arrays remain in `backend/models/legacy/` for reference only — not used by any active controller.
 
@@ -483,6 +484,66 @@ Special rules:
 | 3 | Carol Chen | carol@example.com | candidate123 | candidate |
 | 4 | Dave Dev | dave@example.com | candidate123 | candidate |
 | 5 | Eva Evans | eva@example.com | candidate123 | candidate |
+
+---
+
+## Testing (Playwright E2E)
+
+Install: `cd frontend && npm install --save-dev @playwright/test && npx playwright install`
+Run: `npx playwright test` (requires both servers running)
+
+### Test Suite
+
+#### Auth
+| # | Test | Status |
+|---|---|---|
+| 1 | Register as candidate → auto-login → land on dashboard | ❌ |
+| 2 | Register as company → auto-login → see company dashboard | ❌ |
+| 3 | Login as admin → see admin dashboard | ❌ |
+| 4 | Login with wrong password → show error message | ❌ |
+| 5 | Logout → redirect to /login | ❌ |
+
+#### Candidate Flow
+| # | Test | Status |
+|---|---|---|
+| 6 | Login as candidate → see problems table with difficulty pills | ❌ |
+| 7 | Assigned problem appears in "Assigned to me" section | ❌ |
+| 8 | Click problem → navigate to /problems/:id → see 3-panel layout | ❌ |
+| 9 | Send message → see typing indicator → see AristoBot reply | ❌ |
+| 10 | Submit → navigate back to dashboard → assignment disappears from "Assigned to me" | ❌ |
+| 11 | Return to same problem → chat history loads | ❌ |
+
+#### Company Flow
+| # | Test | Status |
+|---|---|---|
+| 12 | Login as company → see "My Problems" table | ❌ |
+| 13 | Create a problem → appears in My Problems | ❌ |
+| 14 | Assign problem to candidate with deadline → success | ❌ |
+| 15 | After candidate submits → evaluation row appears in dashboard | ❌ |
+| 16 | Click evaluation row → modal shows score + dimension bars | ❌ |
+
+#### Admin Flow
+| # | Test | Status |
+|---|---|---|
+| 17 | Login as admin → see all problems + all users tables | ❌ |
+| 18 | Create user via modal → appears in table | ❌ |
+| 19 | Edit user → name updates in table | ❌ |
+| 20 | Delete user → confirm inline → row removed | ❌ |
+| 21 | Cannot delete last admin → error shown | ❌ |
+
+#### Settings
+| # | Test | Status |
+|---|---|---|
+| 22 | Change display name → save → toast appears | ❌ |
+| 23 | Toggle theme → page switches between dark and light | ❌ |
+
+#### Problems (CRUD)
+| # | Test | Status |
+|---|---|---|
+| 24 | Company creates problem → visible in their dashboard | ❌ |
+| 25 | Company edits problem → updated title shows | ❌ |
+| 26 | Company deletes problem → removed from table | ❌ |
+| 27 | Candidate cannot see private problem (403 if accessed directly) | ❌ |
 
 ---
 
