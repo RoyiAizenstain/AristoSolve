@@ -82,7 +82,10 @@ export default function ProblemDetail() {
         setConvId(conv.id);
 
         // Connect socket
-        const newSocket = io('http://localhost:3000', { transports: ['websocket'] });
+        const socketUrl = window.location.hostname === 'localhost'
+          ? 'http://localhost:3000'
+          : window.location.origin;
+        const newSocket = io(socketUrl, { transports: ['websocket'] });
         socketRef.current = newSocket;
         newSocket.emit('join-conversation', { conversationId: conv.id });
 
