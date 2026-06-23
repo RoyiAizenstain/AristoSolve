@@ -1,6 +1,6 @@
 const { test, expect } = require('@playwright/test');
 
-const BASE = 'http://localhost:5173';
+const BASE = process.env.BASE_URL || 'http://localhost:5173';
 
 // Full evaluation scenario:
 // 1. Company assigns problem to Carol
@@ -85,11 +85,11 @@ test('Full evaluation scenario', async ({ page }) => {
 
   // Submit the solution
   await page.click('button:has-text("Submit")');
-  await page.waitForURL(`${BASE}/dashboard`, { timeout: 15000 });
+  await page.waitForURL(`${BASE}/dashboard`, { timeout: 30000 });
   console.log(`[${elapsed()}] ✅ Carol submitted — evaluation being generated`);
 
-  // Wait a moment for Claude to evaluate
-  await page.waitForTimeout(3000);
+  // Wait for background Claude evaluation to complete
+  await page.waitForTimeout(15000);
 
   // Logout Carol
   await page.click('button:has-text("Logout")');

@@ -94,80 +94,83 @@ const update = async (req, res) => {
     const wasAlreadyEnded = !!conversation.endedAt;
     await conversation.update(req.body);
 
-    // Auto-create AI evaluation — only for company-assigned problems
-    if (req.body.endedAt && !wasAlreadyEnded) {
-      const problem  = await Problem.findByPk(conversation.problemId);
-      const existing = await Evaluation.findOne({ where: { conversationId: id } });
-
-      // Check if this problem was assigned by a company (progress record with deadline)
-      const assignment = await Progress.findOne({
-        where: {
-          userId:    conversation.userId,
-          problemId: conversation.problemId,
-          deadline:  { [Op.ne]: null },
-        },
-      });
-
-      if (!existing && problem && assignment) {
-        try {
-          // Load full conversation history
-          const messages = await Message.findAll({
-            where: { conversationId: id },
-            order: [['sequenceNumber', 'ASC']],
-          });
-
-          const claudeMessages = messages.map(m => ({
-            role:    m.role === 'assistant' ? 'assistant' : 'user',
-            content: m.content,
-          }));
-
-          // Call Claude Haiku to evaluate
-          const evalPromptNote = problem.evalPrompt
-            ? `\n\nCompany evaluation focus: ${problem.evalPrompt}`
-            : '';
-
-          const response = await anthropic.messages.create({
-            model:      'claude-haiku-4-5-20251001',
-            max_tokens: 600,
-            system:     EVAL_SYSTEM_PROMPT + evalPromptNote,
-            messages:   claudeMessages,
-          });
-
-          const raw = response.content[0].text;
-          const jsonMatch = raw.match(/\{[\s\S]*\}/);
-          const result = jsonMatch ? JSON.parse(jsonMatch[0]) : null;
-
-          await Evaluation.create({
-            userId:           conversation.userId,
-            problemId:        conversation.problemId,
-            conversationId:   id,
-            companyId:        problem.createdBy,
-            score:            result?.score ?? null,
-            feedback:         result?.feedback ?? 'Evaluation generated.',
-            thinkingAnalysis: result?.thinkingAnalysis ?? '',
-            dimensions:       {
-              ...result?.dimensions,
-              codeAnalysis: result?.codeAnalysis ?? '',
-            } ?? null,
-          });
-        } catch (evalErr) {
-          console.error('[eval] Claude evaluation failed:', evalErr.message);
-          // Fallback placeholder so the evaluation row still exists
-          await Evaluation.create({
-            userId:           conversation.userId,
-            problemId:        conversation.problemId,
-            conversationId:   id,
-            companyId:        problem.createdBy,
-            score:            null,
-            feedback:         'Evaluation could not be generated.',
-            thinkingAnalysis: '',
-            dimensions:       null,
-          });
-        }
-      }
-    }
-
+    // Respond immediately — evaluation runs in the background
     ok(res, conversation);
+
+    // Fire-and-forget AI evaluation — only for company-assigned problems
+    if (req.body.endedAt && !wasAlreadyEnded) {
+      (async () => {
+        try {
+          const problem  = await Problem.findByPk(conversation.problemId);
+          const existing = await Evaluation.findOne({ where: { conversationId: id } });
+
+          const assignment = await Progress.findOne({
+            where: {
+              userId:    conversation.userId,
+              problemId: conversation.problemId,
+              deadline:  { [Op.ne]: null },
+            },
+          });
+
+          if (!existing && problem && assignment) {
+            try {
+              const messages = await Message.findAll({
+                where: { conversationId: id },
+                order: [['sequenceNumber', 'ASC']],
+              });
+
+              const claudeMessages = messages.map(m => ({
+                role:    m.role === 'assistant' ? 'assistant' : 'user',
+                content: m.content,
+              }));
+
+              const evalPromptNote = problem.evalPrompt
+                ? `\n\nCompany evaluation focus: ${problem.evalPrompt}`
+                : '';
+
+              const response = await anthropic.messages.create({
+                model:      'claude-haiku-4-5-20251001',
+                max_tokens: 600,
+                system:     EVAL_SYSTEM_PROMPT + evalPromptNote,
+                messages:   claudeMessages,
+              });
+
+              const raw = response.content[0].text;
+              const jsonMatch = raw.match(/\{[\s\S]*\}/);
+              const result = jsonMatch ? JSON.parse(jsonMatch[0]) : null;
+
+              await Evaluation.create({
+                userId:           conversation.userId,
+                problemId:        conversation.problemId,
+                conversationId:   id,
+                companyId:        problem.createdBy,
+                score:            result?.score ?? null,
+                feedback:         result?.feedback ?? 'Evaluation generated.',
+                thinkingAnalysis: result?.thinkingAnalysis ?? '',
+                dimensions:       {
+                  ...result?.dimensions,
+                  codeAnalysis: result?.codeAnalysis ?? '',
+                } ?? null,
+              });
+            } catch (evalErr) {
+              console.error('[eval] Claude evaluation failed:', evalErr.message);
+              await Evaluation.create({
+                userId:           conversation.userId,
+                problemId:        conversation.problemId,
+                conversationId:   id,
+                companyId:        problem.createdBy,
+                score:            null,
+                feedback:         'Evaluation could not be generated.',
+                thinkingAnalysis: '',
+                dimensions:       null,
+              });
+            }
+          }
+        } catch (e) {
+          console.error('[eval] Background evaluation error:', e.message);
+        }
+      })();
+    }
   } catch (e) { fail(res, 500, 'INTERNAL_ERROR', e.message); }
 };
 

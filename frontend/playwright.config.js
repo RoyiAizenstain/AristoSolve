@@ -2,10 +2,10 @@ const { defineConfig } = require('@playwright/test');
 
 module.exports = defineConfig({
   testDir: './tests',
-  timeout: 30000,
+  timeout: 90000,
   retries: 1,
   use: {
-    baseURL: 'http://localhost:5173',
+    baseURL: process.env.BASE_URL || 'http://localhost:5173',
     headless: false,
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
