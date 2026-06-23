@@ -1,5 +1,6 @@
 const Anthropic = require('@anthropic-ai/sdk');
-const { Conversation, Message, Problem, Evaluation } = require('../../models/index');
+const { Conversation, Message, Problem, Evaluation, Progress } = require('../../models/index');
+const { Op } = require('sequelize');
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -93,12 +94,21 @@ const update = async (req, res) => {
     const wasAlreadyEnded = !!conversation.endedAt;
     await conversation.update(req.body);
 
-    // Auto-create AI evaluation when conversation ends for the first time
+    // Auto-create AI evaluation — only for company-assigned problems
     if (req.body.endedAt && !wasAlreadyEnded) {
       const problem  = await Problem.findByPk(conversation.problemId);
       const existing = await Evaluation.findOne({ where: { conversationId: id } });
 
-      if (!existing && problem) {
+      // Check if this problem was assigned by a company (progress record with deadline)
+      const assignment = await Progress.findOne({
+        where: {
+          userId:    conversation.userId,
+          problemId: conversation.problemId,
+          deadline:  { [Op.ne]: null },
+        },
+      });
+
+      if (!existing && problem && assignment) {
         try {
           // Load full conversation history
           const messages = await Message.findAll({

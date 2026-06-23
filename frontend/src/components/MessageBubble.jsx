@@ -1,23 +1,61 @@
 import { useState } from 'react';
 
-/* ── Simple syntax highlighter ─────────────────────────────────────── */
+/* ── Syntax highlighter — single-pass tokenizer (no regex corruption) ── */
 function highlight(code, lang) {
-  const escape = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  let s = escape(code);
+  const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 
-  const kwMap = {
-    python:     /\b(def|class|import|from|return|if|elif|else|for|while|in|not|and|or|True|False|None|with|as|try|except|finally|pass|break|continue|lambda|yield|global|nonlocal|del|raise|assert|is)\b/g,
-    javascript: /\b(const|let|var|function|return|if|else|for|while|do|switch|case|break|continue|new|class|import|export|default|from|async|await|try|catch|finally|typeof|instanceof|null|undefined|true|false|of|in|throw|yield)\b/g,
-    java:       /\b(public|private|protected|static|void|int|long|double|float|boolean|char|byte|short|String|new|return|if|else|for|while|do|switch|case|break|continue|class|interface|extends|implements|import|package|try|catch|finally|throw|throws|null|true|false|final|abstract|super|this)\b/g,
+  const KW = {
+    python:     new Set(['def','class','import','from','return','if','elif','else','for','while','in','not','and','or','True','False','None','with','as','try','except','finally','pass','break','continue','lambda','yield','global','nonlocal','del','raise','assert','is']),
+    javascript: new Set(['const','let','var','function','return','if','else','for','while','do','switch','case','break','continue','new','class','import','export','default','from','async','await','try','catch','finally','typeof','instanceof','null','undefined','true','false','of','in','throw','yield']),
+    java:       new Set(['public','private','protected','static','void','int','long','double','float','boolean','char','byte','short','String','new','return','if','else','for','while','do','switch','case','break','continue','class','interface','extends','implements','import','package','try','catch','finally','throw','throws','null','true','false','final','abstract','super','this']),
   };
+  const kws = KW[lang] || KW.python;
+  const out = [];
+  let i = 0;
 
-  const kw = kwMap[lang] || kwMap.python;
-  s = s.replace(kw, '<span class="hl-kw">$1</span>');
-  s = s.replace(/(&#34;[^&#]*&#34;|&#39;[^&#]*&#39;|`[^`]*`)/g, '<span class="hl-str">$1</span>');
-  s = s.replace(/("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')/g, '<span class="hl-str">$1</span>');
-  s = s.replace(/\b(\d+\.?\d*)\b/g, '<span class="hl-num">$1</span>');
-  s = s.replace(/(\/\/[^\n]*|#[^\n]*)/g, '<span class="hl-comment">$1</span>');
-  return s;
+  while (i < code.length) {
+    // Single-line comment (// or #)
+    if ((code[i] === '/' && code[i+1] === '/') || code[i] === '#') {
+      const end = code.indexOf('\n', i);
+      const tok = end === -1 ? code.slice(i) : code.slice(i, end);
+      out.push(`<span class="hl-comment">${esc(tok)}</span>`);
+      i += tok.length;
+      continue;
+    }
+    // String literal
+    if (code[i] === '"' || code[i] === "'") {
+      const q = code[i]; let j = i + 1;
+      while (j < code.length && code[j] !== q && code[j] !== '\n') {
+        if (code[j] === '\\') j++;
+        j++;
+      }
+      if (j < code.length && code[j] === q) j++;
+      out.push(`<span class="hl-str">${esc(code.slice(i, j))}</span>`);
+      i = j;
+      continue;
+    }
+    // Identifier or keyword
+    if (/[a-zA-Z_]/.test(code[i])) {
+      let j = i;
+      while (j < code.length && /\w/.test(code[j])) j++;
+      const word = code.slice(i, j);
+      out.push(kws.has(word) ? `<span class="hl-kw">${esc(word)}</span>` : esc(word));
+      i = j;
+      continue;
+    }
+    // Number
+    if (/\d/.test(code[i])) {
+      let j = i;
+      while (j < code.length && /[\d.]/.test(code[j])) j++;
+      out.push(`<span class="hl-num">${esc(code.slice(i, j))}</span>`);
+      i = j;
+      continue;
+    }
+    // Everything else
+    out.push(esc(code[i]));
+    i++;
+  }
+  return out.join('');
 }
 
 /* ── Code block with copy button ────────────────────────────────────── */
