@@ -12,7 +12,7 @@ yarn-error.log*
 # Build output
 /build
 backend/build/
-frontend/build/
+# frontend/build/ is committed for production deployment (Render serves it)
 
 # Test coverage
 /coverage
