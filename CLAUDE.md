@@ -547,6 +547,100 @@ Demo video: `cd frontend && npx playwright test tests/demo-video.spec.js --confi
 
 ---
 
+## Deployment (Final Project)
+
+### Approach — Monolithic (Express serves React build)
+
+Express serves the compiled React app as static files. One Render Web Service handles both frontend and backend.
+
+```
+Render Web Service (backend/)
+  ├── /api/* → Express API routes
+  ├── /socket.io → Socket.IO
+  └── /* → serves frontend/build/index.html (React SPA)
+```
+
+### What's already done ✅
+
+- `backend/src/server.js` — serves `frontend/build/` as static files, `PORT` from env var, `CORS` from `FRONTEND_URL` env var
+- `frontend/build/` — production React bundle committed to git (CRA build output)
+- `.gitignore` — `frontend/build/` no longer ignored
+
+### Remaining deployment steps
+
+#### Step 3 — AWS RDS (MySQL in the cloud)
+
+1. Create AWS account → RDS → MySQL 8.x → Free tier
+2. Security group: allow port 3306 from `0.0.0.0/0`
+3. Get endpoint: `aristosolve.xxxx.us-east-1.rds.amazonaws.com`
+4. Test from MySQL Workbench
+5. Run migrations + seeders against RDS:
+```bash
+cd backend
+# Update .env with RDS endpoint, then:
+node -e "require('dotenv').config(); const {sequelize}=require('./models/index'); sequelize.sync().then(()=>process.exit(0));"
+node -e "require('dotenv').config(); const {sequelize}=require('./models/index'); const u=require('./seeders/01-users'); const p=require('./seeders/02-problems'); const a=require('./seeders/03-admins'); const qi=sequelize.getQueryInterface(); u.up(qi).then(()=>p.up(qi)).then(()=>a.up(qi)).then(()=>{console.log('Seeded!');process.exit(0)});"
+```
+
+#### Step 4 — Render Web Service
+
+| Setting | Value |
+|---|---|
+| Root directory | `backend` |
+| Build command | `npm install` |
+| Start command | `node src/server.js` |
+
+**Required environment variables on Render:**
+
+| Variable | Value |
+|---|---|
+| `DB_HOST` | AWS RDS endpoint |
+| `DB_PORT` | `3306` |
+| `DB_USER` | RDS username |
+| `DB_PASS` | RDS password |
+| `DB_NAME` | `aristosolve` |
+| `ANTHROPIC_API_KEY` | Anthropic API key |
+| `PORT` | (set automatically by Render) |
+| `NODE_ENV` | `production` |
+
+#### Step 5 — After deploying
+
+Update build whenever frontend changes:
+```bash
+cd frontend && npm run build
+cd .. && git add -f frontend/build/ && git commit -m "rebuild" && git push
+```
+
+### Submission requirements (from deployment PDF)
+
+| Item | What to submit |
+|---|---|
+| Public website URL | Render frontend URL |
+| Backend URL | Same as website (monolithic) |
+| AWS RDS endpoint | `aristosolve.xxxx.rds.amazonaws.com` |
+| Database username | RDS username |
+| Database password | RDS password |
+
+### Presentation checklist
+
+| # | Required step | AristoSolve flow |
+|---|---|---|
+| 1 | Create new user | Register page → new candidate |
+| 2 | Log in | Login with new credentials |
+| 3 | Navigate to main page | Dashboard with problems |
+| 4 | Primary feature | Open problem → write code |
+| 5 | AI feature | Chat with AristoBot (real Claude) |
+| 6 | WebSocket | Typing indicator + real-time reply |
+| 7 | Settings page | Navigate to Settings |
+| 8 | Modify a setting | Change display name → Save |
+| 9 | Navigation bar | Click Dashboard link |
+| 10 | Log out | Logout → /login |
+
+Run rehearsal: `cd frontend && npx playwright test tests/presentation-demo.spec.js --headed`
+Run evaluation scenario: `cd frontend && npx playwright test tests/evaluation-scenario.spec.js --headed`
+
+---
+
 ## Out of Scope (Phase 2 — now complete)
 
 The following are deferred post-submission good-to-have features:
