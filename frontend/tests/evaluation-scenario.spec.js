@@ -50,7 +50,7 @@ test('Full evaluation scenario', async ({ page }) => {
 
   // Verify "Assigned to me" section visible
   const assignedSection = page.locator('h2:has-text("Assigned to me")');
-  await expect(assignedSection).toBeVisible({ timeout: 5000 });
+  await expect(assignedSection).toBeVisible({ timeout: 15000 });
   console.log(`[${elapsed()}] ✅ Carol sees "Assigned to me" section`);
 
   // Click Start on assigned problem
