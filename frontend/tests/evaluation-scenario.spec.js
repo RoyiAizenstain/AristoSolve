@@ -2,130 +2,191 @@ const { test, expect } = require('@playwright/test');
 
 const BASE = process.env.BASE_URL || 'http://localhost:5173';
 
-// Full evaluation scenario:
-// 1. Company assigns problem to Carol
-// 2. Carol sees it, solves with AristoBot, submits
-// 3. Company sees AI evaluation with score + dimensions
+// Fresh company account per run so register always works
+const TS        = Date.now();
+const NEW_EMAIL = `demo.company.${TS}@test.com`;
+const NEW_PASS  = 'demo1234';
 
-test('Full evaluation scenario', async ({ page }) => {
-  const elapsed = () => `${((Date.now() - start) / 1000).toFixed(1)}s`;
+test('Final presentation — all 10 required steps', async ({ page, context }) => {
   const start = Date.now();
+  const t = () => `[${((Date.now() - start) / 1000).toFixed(1)}s]`;
 
-  // ── PART 1: Company assigns problem ──────────────────────────────────────
-  console.log(`\n[${elapsed()}] PART 1: Company assigns problem to Carol`);
-  await page.goto(`${BASE}/login`);
-  await page.fill('input[type="email"]', 'bob@example.com');
-  await page.fill('input[type="password"]', 'company123');
-  await page.click('button:has-text("Log in")');
-  await page.waitForURL(`${BASE}/dashboard`);
+  // ── STEP 1: Register — show invalid input, then valid ────────────────────
+  console.log(`\n${t()} STEP 1: Register`);
+  await page.goto(`${BASE}/register`);
 
-  // Click Assign on first problem
-  const assignBtn = page.locator('.table-row button:has-text("Assign")').first();
-  await expect(assignBtn).toBeVisible({ timeout: 5000 });
-  await assignBtn.click();
-  await page.waitForSelector('.modal');
+  // 1a — invalid: submit empty form → field errors appear
+  await page.click('button:has-text("Create account")');
+  await expect(page.locator('.error-text').first()).toBeVisible({ timeout: 5000 });
+  console.log(`${t()} ✅ 1a: Invalid input — ⚠ errors shown on empty fields`);
 
-  // Select Carol
-  await page.locator('.modal select').selectOption({ index: 1 });
-  // Set deadline
-  const tomorrow = new Date();
-  tomorrow.setDate(tomorrow.getDate() + 7);
-  await page.locator('.modal input[type="date"]').fill(tomorrow.toISOString().split('T')[0]);
-  // Confirm assign
-  await page.locator('.modal-footer button.btn-primary').click();
-  await expect(page.locator('.modal')).not.toBeVisible({ timeout: 5000 });
-  console.log(`[${elapsed()}] ✅ Company assigned problem to Carol`);
+  // 1b — valid: fill form as company user
+  await page.fill('#firstName', 'Demo');
+  await page.fill('#lastName', 'Company');
+  await page.fill('#email', NEW_EMAIL);
+  await page.fill('#password', NEW_PASS);
+  await page.locator('label.role-option').filter({ hasText: 'Company' }).click();
+  await page.click('button:has-text("Create account")');
+  await page.waitForURL(`${BASE}/dashboard`, { timeout: 20000 });
+  console.log(`${t()} ✅ 1b: New company user registered → CREATE user in DB`);
 
-  // Logout company
+  // ── STEP 2: Login — show wrong password, then correct ───────────────────
+  console.log(`\n${t()} STEP 2: Login`);
   await page.click('button:has-text("Logout")');
-  await page.waitForURL(`${BASE}/login`);
+  await page.waitForURL(`${BASE}/login`, { timeout: 5000 });
 
-  // ── PART 2: Carol solves assigned problem ─────────────────────────────────
-  console.log(`[${elapsed()}] PART 2: Carol logs in and solves assigned problem`);
-  await page.fill('input[type="email"]', 'carol@example.com');
-  await page.fill('input[type="password"]', 'candidate123');
+  // 2a — wrong password → error banner
+  await page.fill('#email', NEW_EMAIL);
+  await page.fill('#password', 'wrongpassword');
   await page.click('button:has-text("Log in")');
-  await page.waitForURL(`${BASE}/dashboard`);
-  await page.waitForTimeout(1000);
+  await expect(page.locator('.error-banner')).toBeVisible({ timeout: 8000 });
+  console.log(`${t()} ✅ 2a: Wrong password — ✖ error banner shown`);
 
-  // Verify "Assigned to me" section visible
-  const assignedSection = page.locator('h2:has-text("Assigned to me")');
-  await expect(assignedSection).toBeVisible({ timeout: 15000 });
-  console.log(`[${elapsed()}] ✅ Carol sees "Assigned to me" section`);
+  // 2b — correct password → dashboard
+  await page.fill('#password', NEW_PASS);
+  await page.click('button:has-text("Log in")');
+  await page.waitForURL(`${BASE}/dashboard`, { timeout: 20000 });
+  console.log(`${t()} ✅ 2b: Logged in successfully`);
 
-  // Click Start on assigned problem
-  const startBtn = page.locator('.table-row button:has-text("Start")').first();
-  await startBtn.click();
+  // ── STEP 3: Main application page ───────────────────────────────────────
+  console.log(`\n${t()} STEP 3: Main page`);
+  await expect(page.locator('h1:has-text("Company Dashboard")')).toBeVisible({ timeout: 5000 });
+  console.log(`${t()} ✅ 3: Company Dashboard visible`);
+
+  // ── STEP 4a+b: CREATE + UPDATE (DELETE comes after AI demo) ─────────────
+  console.log(`\n${t()} STEP 4: Primary feature (CREATE → UPDATE)`);
+
+  // 4a — CREATE problem
+  await page.click('button:has-text("+ Add Problem")');
+  await page.waitForURL(`${BASE}/problems/new`, { timeout: 8000 });
+  const problemTitle = `Demo Problem ${TS}`;
+  await page.fill('#problem-title', problemTitle);
+  await page.locator('textarea[placeholder*="Describe"]').fill('A test problem created for the presentation demo.');
+  await page.click('button:has-text("Create Problem")');
+  await page.waitForURL(`${BASE}/dashboard`, { timeout: 10000 });
+  await expect(page.locator(`.table-row:has-text("${problemTitle}")`)).toBeVisible({ timeout: 8000 });
+  console.log(`${t()} ✅ 4a: Problem created → CREATE DB call`);
+
+  // 4b — UPDATE problem
+  await page.locator(`.table-row:has-text("${problemTitle}") button:has-text("Edit")`).click();
+  await page.waitForURL(/\/problems\/\d+\/edit/, { timeout: 8000 });
+  await page.fill('#problem-title', `${problemTitle} EDITED`);
+  await page.click('button[type="submit"]');
+  await page.waitForURL(`${BASE}/dashboard`, { timeout: 10000 });
+  await expect(page.locator(`.table-row:has-text("${problemTitle} EDITED")`)).toBeVisible({ timeout: 8000 });
+  console.log(`${t()} ✅ 4b: Problem edited → UPDATE DB call`);
+
+  // ── STEP 5: AI feature — open the edited problem ─────────────────────────
+  console.log(`\n${t()} STEP 5: AI feature`);
+
+  // Click the edited problem to open it
+  await page.locator(`.table-row:has-text("${problemTitle} EDITED") .problem-title`).click();
   await page.waitForSelector('.pd-root', { timeout: 10000 });
-  console.log(`[${elapsed()}] ✅ Carol opened assigned problem`);
+  const problemPageUrl = page.url();
 
   // Wait for AristoBot greeting
-  await page.waitForSelector('.bubble-ai', { timeout: 15000 }).catch(() => {});
-  await page.waitForTimeout(500);
+  await page.waitForSelector('.bubble-ai', { timeout: 20000 });
 
-  // Chat with AristoBot
-  await page.fill('.pd-chat-input', 'I think I should use a hash map to solve this efficiently');
+  // 5a — empty input: send button disabled
+  await expect(page.locator('.pd-send-btn')).toBeDisabled({ timeout: 3000 });
+  console.log(`${t()} ✅ 5a: Empty input — send button disabled (greyed out)`);
+
+  // 5b — real message → AristoBot replies
+  const aiBefore = await page.locator('.bubble-ai').count();
+  await page.fill('.pd-chat-input', 'I think we should use a hash map to achieve O(n) time complexity');
+  await expect(page.locator('.pd-send-btn')).toBeEnabled({ timeout: 3000 });
   await page.click('.pd-send-btn');
   await page.waitForFunction(
-    () => document.querySelectorAll('.bubble-ai').length >= 2,
-    { timeout: 20000 }
-  ).catch(() => {});
-  await expect(page.locator('.pd-chat-input')).toBeEnabled({ timeout: 15000 }).catch(() => {});
-  console.log(`[${elapsed()}] ✅ AristoBot responded to Carol`);
+    (before) => document.querySelectorAll('.bubble-ai').length > before,
+    aiBefore,
+    { timeout: 30000 }
+  );
+  console.log(`${t()} ✅ 5b: AristoBot replied → AI feature working`);
 
-  // Second message
-  await page.fill('.pd-chat-input', 'The time complexity would be O(n) with this approach');
+  // ── STEP 6: WebSocket — 2-tab live update ───────────────────────────────
+  console.log(`\n${t()} STEP 6: WebSocket live update`);
+
+  const page2 = await context.newPage();
+  await page2.goto(problemPageUrl);
+  await page2.waitForSelector('.pd-root', { timeout: 10000 });
+  await page2.waitForSelector('.bubble-ai', { timeout: 20000 });
+  console.log(`${t()} ✅ 6a: Second tab opened on same problem URL`);
+
+  const aiCountTab1 = await page.locator('.bubble-ai').count();
+  const aiCountTab2 = await page2.locator('.bubble-ai').count();
+  await page.fill('.pd-chat-input', 'What about the space complexity?');
   await page.click('.pd-send-btn');
-  await page.waitForFunction(
-    () => document.querySelectorAll('.bubble-ai').length >= 3,
-    { timeout: 20000 }
-  ).catch(() => {});
-  await expect(page.locator('.pd-chat-input')).toBeEnabled({ timeout: 15000 }).catch(() => {});
-  console.log(`[${elapsed()}] ✅ Second AristoBot exchange done`);
 
-  // Submit the solution
-  await page.click('button:has-text("Submit")');
-  await page.waitForURL(`${BASE}/dashboard`, { timeout: 30000 });
-  console.log(`[${elapsed()}] ✅ Carol submitted — evaluation being generated`);
+  await Promise.all([
+    page.waitForFunction(
+      (before) => document.querySelectorAll('.bubble-ai').length > before,
+      aiCountTab1,
+      { timeout: 30000 }
+    ),
+    page2.waitForFunction(
+      (before) => document.querySelectorAll('.bubble-ai').length > before,
+      aiCountTab2,
+      { timeout: 30000 }
+    ),
+  ]);
+  console.log(`${t()} ✅ 6b: Reply appeared in BOTH tabs → WebSocket live sync confirmed`);
+  await page2.close();
 
-  // Wait for background Claude evaluation to complete
-  await page.waitForTimeout(15000);
+  // ── STEP 7: Settings page ────────────────────────────────────────────────
+  // ProblemDetail has no navbar — exit back to dashboard first
+  console.log(`\n${t()} STEP 7: Settings`);
+  await page.click('button:has-text("← Problems")');
+  await page.waitForURL(`${BASE}/dashboard`, { timeout: 5000 });
+  await page.locator('a.nav-link:has-text("Settings")').click();
+  await page.waitForURL(`${BASE}/settings`, { timeout: 5000 });
+  await page.waitForSelector('#displayName', { timeout: 5000 });
+  console.log(`${t()} ✅ 7: Settings page loaded`);
 
-  // Logout Carol
-  await page.click('button:has-text("Logout")');
-  await page.waitForURL(`${BASE}/login`);
+  // ── STEP 8: Modify a setting ─────────────────────────────────────────────
+  console.log(`\n${t()} STEP 8: Modify setting`);
+  await page.fill('#displayName', `Demo User ${TS}`);
+  await page.click('button:has-text("Save changes")');
+  await expect(page.locator('.toast')).toBeVisible({ timeout: 5000 });
+  console.log(`${t()} ✅ 8: Display name saved → UPDATE DB call`);
 
-  // ── PART 3: Company sees evaluation ───────────────────────────────────────
-  console.log(`[${elapsed()}] PART 3: Company checks evaluation`);
-  await page.fill('input[type="email"]', 'bob@example.com');
-  await page.fill('input[type="password"]', 'company123');
-  await page.click('button:has-text("Log in")');
-  await page.waitForURL(`${BASE}/dashboard`);
-  await page.waitForTimeout(1500);
+  // ── STEP 9: Navbar navigation back to Dashboard ──────────────────────────
+  console.log(`\n${t()} STEP 9: Navbar navigation`);
+  await page.locator('a.nav-link:has-text("Dashboard")').click();
+  await page.waitForURL(`${BASE}/dashboard`, { timeout: 5000 });
+  await expect(page.locator('h1:has-text("Company Dashboard")')).toBeVisible({ timeout: 5000 });
+  console.log(`${t()} ✅ 9: Navigated to Dashboard via navbar`);
 
-  // Verify evaluation appears in table
-  const evalTable = page.locator('h2:has-text("Candidate Evaluations")');
-  await expect(evalTable).toBeVisible();
-  const viewBtn = page.locator('button:has-text("View")').first();
-  await expect(viewBtn).toBeVisible({ timeout: 10000 });
-  console.log(`[${elapsed()}] ✅ Evaluation row appears in company dashboard`);
-
-  // Open evaluation modal
-  await viewBtn.click();
-  await page.waitForSelector('.modal');
+  // ── STEP 4c: DELETE (shown after returning to dashboard) ─────────────────
+  console.log(`\n${t()} STEP 4c: DELETE problem`);
+  page.once('dialog', dialog => dialog.accept());
+  const [deleteResp] = await Promise.all([
+    page.waitForResponse(
+      resp => resp.request().method() === 'DELETE' && resp.url().includes('/problems'),
+      { timeout: 15000 }
+    ),
+    page.locator(`.table-row:has-text("${problemTitle} EDITED") button:has-text("Delete")`).click(),
+  ]);
+  console.log(`${t()} DELETE status: ${deleteResp.status()}`);
+  await page.waitForLoadState('load', { timeout: 10000 });
   await page.waitForTimeout(1000);
+  await expect(page.locator(`.table-row:has-text("${problemTitle} EDITED")`)).not.toBeVisible({ timeout: 8000 });
+  console.log(`${t()} ✅ 4c: Problem deleted → DELETE DB call`);
 
-  // Verify score and dimensions visible
-  await expect(page.locator('.modal-body')).toBeVisible();
-  console.log(`[${elapsed()}] ✅ Evaluation modal opened with score + dimensions`);
+  // ── STEP 10: Logout ──────────────────────────────────────────────────────
+  console.log(`\n${t()} STEP 10: Logout`);
+  await page.click('button:has-text("Logout")');
+  await page.waitForURL(`${BASE}/login`, { timeout: 5000 });
+  console.log(`${t()} ✅ 10: Logged out → redirected to /login`);
 
-  // Close modal
-  await page.locator('.modal-close').click();
-  await expect(page.locator('.modal')).not.toBeVisible({ timeout: 3000 });
-
+  // ── Summary ──────────────────────────────────────────────────────────────
   const total = ((Date.now() - start) / 1000).toFixed(1);
-  console.log(`\n══════════════════════════════════════`);
-  console.log(`  EVALUATION SCENARIO PASSED in ${total}s`);
-  console.log(`  Company assigned → Carol solved → AI evaluation ✅`);
-  console.log(`══════════════════════════════════════\n`);
+  console.log(`\n${'═'.repeat(52)}`);
+  console.log(`  ALL 10 PRESENTATION STEPS PASSED in ${total}s`);
+  console.log(`  ✅ Register (invalid + valid) → CREATE user`);
+  console.log(`  ✅ Login (wrong pw + correct)`);
+  console.log(`  ✅ Main page → CREATE → UPDATE problem`);
+  console.log(`  ✅ AI (empty blocked + real reply)`);
+  console.log(`  ✅ WebSocket (2-tab live sync)`);
+  console.log(`  ✅ Settings → modify → navbar → DELETE → logout`);
+  console.log(`${'═'.repeat(52)}\n`);
 });
