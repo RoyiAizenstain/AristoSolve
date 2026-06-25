@@ -651,6 +651,94 @@ Run evaluation scenario: `$env:BASE_URL="https://aristosolve.onrender.com"; cd f
 
 ---
 
+## Final Project — 100/100 Plan
+
+### What the grader checks (from PDF)
+
+| # | Required | Sub-requirement | AristoSolve action |
+|---|---|---|---|
+| 1 | Create new user | Show invalid input handling | Submit empty Register form → `⚠ Required` errors appear |
+| 2 | Log in | Show wrong password handling | Type wrong password → `✖ Invalid email or password` banner |
+| 3 | Navigate to main page | — | Auto-redirect to `/dashboard` after login |
+| 4 | Primary feature | CREATE + UPDATE + DELETE DB call | Add problem → Edit problem → Delete problem |
+| 5 | AI feature | Show empty/invalid input handling | Try send with empty chat → button stays disabled (greyed out) |
+| 6 | WebSocket | Show live update | Open 2nd tab on same problem → typing indicator + reply appear in both |
+| 7 | Settings page | — | Click Settings in navbar |
+| 8 | Modify setting | — | Change display name → Save |
+| 9 | Navbar navigation | Navigate to another page | Click Dashboard in navbar |
+| 10 | Log out | — | Click Logout → redirect to `/login` |
+
+---
+
+### Exact 3-Minute Demo Script
+
+**Role: Company user (register fresh on presentation day)**
+
+| Clock | Action | Requirement |
+|---|---|---|
+| 0:00–0:15 | Go to `/register`, click "Create account" with empty form → red `⚠ Required` errors appear on all fields | Step 1 — invalid input |
+| 0:15–0:30 | Fill valid company account → submit → auto-login → dashboard | Step 1 — CREATE user |
+| 0:30–0:40 | Logout → Login page → type wrong password → `✖` error banner | Step 2 — wrong password |
+| 0:40–0:50 | Enter correct password → company dashboard loads | Step 2 — login |
+| 0:50–1:00 | Point at company dashboard ("main application page") | Step 3 |
+| 1:00–1:10 | Click "Add Problem" → fill form → Save → problem appears in My Problems table | Step 4 — **CREATE** |
+| 1:10–1:20 | Click "Edit" on that problem → change title → Save → updated title shows | Step 4 — **UPDATE** |
+| 1:20–1:30 | Click "Delete" → confirm → row removed from table | Step 4 — **DELETE** |
+| 1:30–1:45 | Click a seeded problem → ProblemDetail opens | Step 4 continued |
+| 1:45–1:55 | Click send with empty chat input → send button stays grey/disabled | Step 5 — invalid AI input |
+| 1:55–2:15 | Type a real message → AristoBot typing indicator → reply appears | Step 5 — AI feature |
+| 2:15–2:30 | Open **2nd browser tab** on same problem URL → send message in tab 1 → typing indicator + reply appear in **both tabs** | Step 6 — WebSocket |
+| 2:30–2:40 | Click Settings in navbar | Step 7 |
+| 2:40–2:50 | Change display name → Save | Step 8 |
+| 2:50–2:55 | Click Dashboard in navbar | Step 9 |
+| 2:55–3:00 | Click Logout → `/login` | Step 10 |
+
+---
+
+### MySQL Workbench 40-Second Demo
+
+Pre-save a connection in Workbench before presentation day:
+
+| Field | Value |
+|---|---|
+| Connection name | AristoSolve RDS |
+| Hostname | `aristo.cjkq8eiikl4n.eu-north-1.rds.amazonaws.com` |
+| Port | `3306` |
+| Username | `admin` |
+| Password | (save in keychain) |
+| Default schema | `aristosolve` |
+
+During the 40 seconds, run these two queries to show DB was updated:
+```sql
+SELECT userId, firstName, lastName, email, userRole, createDate FROM users ORDER BY createDate DESC LIMIT 5;
+SELECT id, role, content, createdAt FROM messages ORDER BY createdAt DESC LIMIT 5;
+```
+
+This shows: the new user registered during the demo + the AristoBot messages from the chat.
+
+---
+
+### Before Presentation Day Checklist
+
+- [ ] **Render cold start** — Render free tier sleeps after 15 min. Open https://aristosolve.onrender.com 2 minutes before presenting so it's warm when the grader's computer connects.
+- [ ] **Re-seed the DB** — Run `cd backend && npm run seed` so the demo starts with clean seed data (no leftover test records from Playwright runs).
+- [ ] **Save MySQL Workbench connection** — Pre-configure the RDS connection so you don't type credentials live.
+- [ ] **Pre-open 2nd tab** — Have the problem URL ready in a second tab before the WebSocket demo moment.
+- [ ] **Submit credentials form** — Fill the submission form with: URL, RDS endpoint, username, password.
+- [ ] **Rehearse timing** — Run `$env:BASE_URL="https://aristosolve.onrender.com"; cd frontend; npx playwright test tests/evaluation-scenario.spec.js --headed` to verify the live app still passes end-to-end.
+
+### Verify with E2E test
+
+After any change, run the evaluation scenario against production to confirm nothing broke:
+
+```powershell
+$env:BASE_URL="https://aristosolve.onrender.com"; cd frontend; npx playwright test tests/evaluation-scenario.spec.js --headed
+```
+
+Expected: `1 passed` in ~60 seconds. If it fails, do not present until fixed.
+
+---
+
 ## Out of Scope (Phase 2 — now complete)
 
 The following are deferred post-submission good-to-have features:
