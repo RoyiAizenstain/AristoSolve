@@ -653,20 +653,34 @@ Run evaluation scenario: `$env:BASE_URL="https://aristosolve.onrender.com"; cd f
 
 ## Final Project — 100/100 Plan
 
+### Overall Status
+
+| Area | Status |
+|---|---|
+| Deployment (Render + AWS RDS) | ✅ Live |
+| All 10 presentation steps work | ✅ E2E test passes in 27s |
+| DELETE bug (company blocked) | ✅ Fixed |
+| Demo script tested on production | ✅ Verified |
+| DB re-seeded for clean demo | ⏳ Do before presentation |
+| MySQL Workbench connection saved | ⏳ Do before presentation |
+| Credentials form submitted | ⏳ Do before presentation |
+
+---
+
 ### What the grader checks (from PDF)
 
-| # | Required | Sub-requirement | AristoSolve action |
-|---|---|---|---|
-| 1 | Create new user | Show invalid input handling | Submit empty Register form → `⚠ Required` errors appear |
-| 2 | Log in | Show wrong password handling | Type wrong password → `✖ Invalid email or password` banner |
-| 3 | Navigate to main page | — | Auto-redirect to `/dashboard` after login |
-| 4 | Primary feature | CREATE + UPDATE + DELETE DB call | Add problem → Edit problem → Delete problem |
-| 5 | AI feature | Show empty/invalid input handling | Try send with empty chat → button stays disabled (greyed out) |
-| 6 | WebSocket | Show live update | Open 2nd tab on same problem → typing indicator + reply appear in both |
-| 7 | Settings page | — | Click Settings in navbar |
-| 8 | Modify setting | — | Change display name → Save |
-| 9 | Navbar navigation | Navigate to another page | Click Dashboard in navbar |
-| 10 | Log out | — | Click Logout → redirect to `/login` |
+| # | Required | Sub-requirement | AristoSolve action | Status |
+|---|---|---|---|---|
+| 1 | Create new user | Show invalid input handling | Submit empty Register form → `⚠ Required` errors appear | ✅ |
+| 2 | Log in | Show wrong password handling | Type wrong password → `✖ Invalid email or password` banner | ✅ |
+| 3 | Navigate to main page | — | Auto-redirect to `/dashboard` after login | ✅ |
+| 4 | Primary feature | CREATE + UPDATE + DELETE DB call | Add problem → Edit problem → Delete problem | ✅ |
+| 5 | AI feature | Show empty/invalid input handling | Try send with empty chat → button stays disabled (greyed out) | ✅ |
+| 6 | WebSocket | Show live update | Open 2nd tab on same problem → reply appears in both | ✅ |
+| 7 | Settings page | — | Click Settings in navbar | ✅ |
+| 8 | Modify setting | — | Change display name → Save | ✅ |
+| 9 | Navbar navigation | Navigate to another page | Click Dashboard in navbar | ✅ |
+| 10 | Log out | — | Click Logout → redirect to `/login` | ✅ |
 
 ---
 
@@ -729,12 +743,14 @@ This shows: the new user registered during the demo + the AristoBot messages fro
 
 ### Before Presentation Day Checklist
 
-- [ ] **Render cold start** — Render free tier sleeps after 15 min. Open https://aristosolve.onrender.com 2 minutes before presenting so it's warm when the grader's computer connects.
-- [ ] **Re-seed the DB** — Run `cd backend && npm run seed` so the demo starts with clean seed data (no leftover test records from Playwright runs).
-- [ ] **Save MySQL Workbench connection** — Pre-configure the RDS connection so you don't type credentials live.
-- [ ] **Pre-open 2nd tab** — Have the problem URL ready in a second tab before the WebSocket demo moment (step 6).
-- [ ] **Submit credentials form** — Fill the submission form with: URL, RDS endpoint, username, password.
-- [ ] **Run E2E test** — Verify the live app passes all 10 steps before walking in.
+| # | Task | Status |
+|---|---|---|
+| 1 | **Run E2E test** — `$env:BASE_URL="https://aristosolve.onrender.com"; cd frontend; npx playwright test tests/evaluation-scenario.spec.js --headed` → must show `1 passed` | ✅ Passing |
+| 2 | **Re-seed the DB** — `cd backend && npm run seed` — clears test data from Playwright runs | ⏳ Do day before |
+| 3 | **Save MySQL Workbench connection** — pre-configure RDS connection so you don't type credentials live | ⏳ Do day before |
+| 4 | **Submit credentials form** — fill שיבוץ להצגת פרויקט form with: URL, RDS endpoint, username, password | ⏳ Do now |
+| 5 | **Wake up Render** — open https://aristosolve.onrender.com 2 min before presenting (free tier sleeps after 15 min) | ⏳ Do on presentation day |
+| 6 | **Pre-open 2nd browser tab** — have it ready on the problem URL for step 6 (WebSocket demo) | ⏳ Do on presentation day |
 
 ### Verify with E2E test
 
