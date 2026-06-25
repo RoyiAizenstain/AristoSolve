@@ -547,7 +547,17 @@ Demo video: `cd frontend && npx playwright test tests/demo-video.spec.js --confi
 
 ---
 
-## Deployment (Final Project)
+## Deployment (Final Project) ✅ COMPLETE
+
+### Live URLs
+
+| Item | URL |
+|---|---|
+| **Public website** | https://aristosolve.onrender.com |
+| **Backend API** | https://aristosolve.onrender.com/api |
+| **AWS RDS endpoint** | `aristo.cjkq8eiikl4n.eu-north-1.rds.amazonaws.com` |
+| **DB name** | `aristosolve` |
+| **DB user** | `admin` |
 
 ### Approach — Monolithic (Express serves React build)
 
@@ -560,29 +570,17 @@ Render Web Service (backend/)
   └── /* → serves frontend/build/index.html (React SPA)
 ```
 
-### What's already done ✅
+### What's deployed ✅
 
-- `backend/src/server.js` — serves `frontend/build/` as static files, `PORT` from env var, `CORS` from `FRONTEND_URL` env var
-- `frontend/build/` — production React bundle committed to git (CRA build output)
-- `.gitignore` — `frontend/build/` no longer ignored
+- ✅ AWS RDS MySQL (eu-north-1) — created, firewall open, seeded
+- ✅ Render Web Service — live at https://aristosolve.onrender.com
+- ✅ All env vars set on Render (DB_HOST, DB_PORT, DB_USER, DB_PASS, DB_NAME, ANTHROPIC_API_KEY, JWT_SECRET)
+- ✅ `frontend/build/` committed to git — Express serves it as static files
+- ✅ Socket.IO CORS fixed — uses `process.env.FRONTEND_URL` (not hardcoded localhost)
+- ✅ Frontend socket URL fixed — uses `window.location.origin` in production
+- ✅ Claude evaluation is fire-and-forget — submit navigates instantly, evaluation runs in background
 
-### Remaining deployment steps
-
-#### Step 3 — AWS RDS (MySQL in the cloud)
-
-1. Create AWS account → RDS → MySQL 8.x → Free tier
-2. Security group: allow port 3306 from `0.0.0.0/0`
-3. Get endpoint: `aristosolve.xxxx.us-east-1.rds.amazonaws.com`
-4. Test from MySQL Workbench
-5. Run migrations + seeders against RDS:
-```bash
-cd backend
-# Update .env with RDS endpoint, then:
-node -e "require('dotenv').config(); const {sequelize}=require('./models/index'); sequelize.sync().then(()=>process.exit(0));"
-node -e "require('dotenv').config(); const {sequelize}=require('./models/index'); const u=require('./seeders/01-users'); const p=require('./seeders/02-problems'); const a=require('./seeders/03-admins'); const qi=sequelize.getQueryInterface(); u.up(qi).then(()=>p.up(qi)).then(()=>a.up(qi)).then(()=>{console.log('Seeded!');process.exit(0)});"
-```
-
-#### Step 4 — Render Web Service
+### Render Web Service settings
 
 | Setting | Value |
 |---|---|
@@ -590,36 +588,48 @@ node -e "require('dotenv').config(); const {sequelize}=require('./models/index')
 | Build command | `npm install` |
 | Start command | `node src/server.js` |
 
-**Required environment variables on Render:**
+### Re-seed the production database
 
-| Variable | Value |
-|---|---|
-| `DB_HOST` | AWS RDS endpoint |
-| `DB_PORT` | `3306` |
-| `DB_USER` | RDS username |
-| `DB_PASS` | RDS password |
-| `DB_NAME` | `aristosolve` |
-| `ANTHROPIC_API_KEY` | Anthropic API key |
-| `PORT` | (set automatically by Render) |
-| `NODE_ENV` | `production` |
+```bash
+cd backend
+npm run seed
+```
 
-#### Step 5 — After deploying
+> This runs against whatever `DB_HOST` is in `backend/.env` — make sure it points to the RDS endpoint.
 
-Update build whenever frontend changes:
+### Update production after frontend changes
+
 ```bash
 cd frontend && npm run build
-cd .. && git add -f frontend/build/ && git commit -m "rebuild" && git push
+cd .. && git add -f frontend/build/ && git commit -m "rebuild frontend" && git push
 ```
+
+Render redeploys automatically on every push to `master`.
 
 ### Submission requirements (from deployment PDF)
 
-| Item | What to submit |
+| Item | Value |
 |---|---|
-| Public website URL | Render frontend URL |
-| Backend URL | Same as website (monolithic) |
-| AWS RDS endpoint | `aristosolve.xxxx.rds.amazonaws.com` |
-| Database username | RDS username |
-| Database password | RDS password |
+| Public website URL | https://aristosolve.onrender.com |
+| Backend URL | https://aristosolve.onrender.com (monolithic) |
+| AWS RDS endpoint | `aristo.cjkq8eiikl4n.eu-north-1.rds.amazonaws.com` |
+| Database username | `admin` |
+| Database password | (in `backend/.env` — do not commit) |
+
+### Running tests against production
+
+```powershell
+# Full suite against production
+$env:BASE_URL="https://aristosolve.onrender.com"; cd frontend; npx playwright test
+
+# Single test
+$env:BASE_URL="https://aristosolve.onrender.com"; cd frontend; npx playwright test tests/evaluation-scenario.spec.js --headed
+
+# Locally (both servers must be running)
+cd frontend; npx playwright test
+```
+
+> Tests that create/delete data affect the real production DB. Re-seed with `cd backend && npm run seed` after test runs if needed.
 
 ### Presentation checklist
 
@@ -637,7 +647,7 @@ cd .. && git add -f frontend/build/ && git commit -m "rebuild" && git push
 | 10 | Log out | Logout → /login |
 
 Run rehearsal: `cd frontend && npx playwright test tests/presentation-demo.spec.js --headed`
-Run evaluation scenario: `cd frontend && npx playwright test tests/evaluation-scenario.spec.js --headed`
+Run evaluation scenario: `$env:BASE_URL="https://aristosolve.onrender.com"; cd frontend; npx playwright test tests/evaluation-scenario.spec.js --headed`
 
 ---
 
