@@ -670,28 +670,31 @@ Run evaluation scenario: `$env:BASE_URL="https://aristosolve.onrender.com"; cd f
 
 ---
 
-### Exact 3-Minute Demo Script
+### Exact 3-Minute Demo Script ✅ Tested & Verified (27s on Render)
 
 **Role: Company user (register fresh on presentation day)**
 
 | Clock | Action | Requirement |
 |---|---|---|
-| 0:00–0:15 | Go to `/register`, click "Create account" with empty form → red `⚠ Required` errors appear on all fields | Step 1 — invalid input |
-| 0:15–0:30 | Fill valid company account → submit → auto-login → dashboard | Step 1 — CREATE user |
+| 0:00–0:15 | Go to `/register`, click "Create account" with empty form → red `⚠ Required` errors appear | Step 1 — invalid input |
+| 0:15–0:30 | Fill valid company account → submit → auto-login → dashboard | Step 1 — **CREATE** user |
 | 0:30–0:40 | Logout → Login page → type wrong password → `✖` error banner | Step 2 — wrong password |
 | 0:40–0:50 | Enter correct password → company dashboard loads | Step 2 — login |
 | 0:50–1:00 | Point at company dashboard ("main application page") | Step 3 |
-| 1:00–1:10 | Click "Add Problem" → fill form → Save → problem appears in My Problems table | Step 4 — **CREATE** |
-| 1:10–1:20 | Click "Edit" on that problem → change title → Save → updated title shows | Step 4 — **UPDATE** |
-| 1:20–1:30 | Click "Delete" → confirm → row removed from table | Step 4 — **DELETE** |
-| 1:30–1:45 | Click a seeded problem → ProblemDetail opens | Step 4 continued |
-| 1:45–1:55 | Click send with empty chat input → send button stays grey/disabled | Step 5 — invalid AI input |
-| 1:55–2:15 | Type a real message → AristoBot typing indicator → reply appears | Step 5 — AI feature |
-| 2:15–2:30 | Open **2nd browser tab** on same problem URL → send message in tab 1 → typing indicator + reply appear in **both tabs** | Step 6 — WebSocket |
-| 2:30–2:40 | Click Settings in navbar | Step 7 |
-| 2:40–2:50 | Change display name → Save | Step 8 |
-| 2:50–2:55 | Click Dashboard in navbar | Step 9 |
+| 1:00–1:10 | Click "+ Add Problem" → fill title + description → "Create Problem" → appears in My Problems | Step 4 — **CREATE** |
+| 1:10–1:20 | Click "Edit" → change title → Save → updated title shows in table | Step 4 — **UPDATE** |
+| 1:20–1:35 | Click on the edited problem title → ProblemDetail opens | Step 4 continued |
+| 1:35–1:45 | Click send with empty chat input → send button stays grey/disabled | Step 5 — invalid AI input |
+| 1:45–2:05 | Type a real message → AristoBot typing indicator → reply appears | Step 5 — AI feature |
+| 2:05–2:20 | Open **2nd browser tab** on same problem URL → send message in tab 1 → reply appears in **both tabs** | Step 6 — WebSocket |
+| 2:20–2:25 | Click "← Problems" to exit ProblemDetail → back to dashboard | Navigation |
+| 2:25–2:30 | Click Settings in navbar | Step 7 |
+| 2:30–2:40 | Change display name → "Save changes" → toast appears | Step 8 |
+| 2:40–2:45 | Click Dashboard in navbar | Step 9 |
+| 2:45–2:55 | Click "Delete" on the problem → confirm → row disappears | Step 4 — **DELETE** |
 | 2:55–3:00 | Click Logout → `/login` | Step 10 |
+
+> **Note:** DELETE is shown after returning to the dashboard (step 9) because ProblemDetail has no navbar. This is the natural flow a real user would follow.
 
 ---
 
@@ -718,24 +721,30 @@ This shows: the new user registered during the demo + the AristoBot messages fro
 
 ---
 
+### Bugs found and fixed during E2E testing
+
+| Bug | Root cause | Fix |
+|---|---|---|
+| Company couldn't delete own problems | `DELETE /problems/:id` route had `auth(['admin'])` — company role was excluded | Changed to `auth(['admin', 'company'])` in `backend/src/routes/problems.js` |
+
 ### Before Presentation Day Checklist
 
 - [ ] **Render cold start** — Render free tier sleeps after 15 min. Open https://aristosolve.onrender.com 2 minutes before presenting so it's warm when the grader's computer connects.
 - [ ] **Re-seed the DB** — Run `cd backend && npm run seed` so the demo starts with clean seed data (no leftover test records from Playwright runs).
 - [ ] **Save MySQL Workbench connection** — Pre-configure the RDS connection so you don't type credentials live.
-- [ ] **Pre-open 2nd tab** — Have the problem URL ready in a second tab before the WebSocket demo moment.
+- [ ] **Pre-open 2nd tab** — Have the problem URL ready in a second tab before the WebSocket demo moment (step 6).
 - [ ] **Submit credentials form** — Fill the submission form with: URL, RDS endpoint, username, password.
-- [ ] **Rehearse timing** — Run `$env:BASE_URL="https://aristosolve.onrender.com"; cd frontend; npx playwright test tests/evaluation-scenario.spec.js --headed` to verify the live app still passes end-to-end.
+- [ ] **Run E2E test** — Verify the live app passes all 10 steps before walking in.
 
 ### Verify with E2E test
 
-After any change, run the evaluation scenario against production to confirm nothing broke:
+After any change, run the full 10-step presentation test against production:
 
 ```powershell
 $env:BASE_URL="https://aristosolve.onrender.com"; cd frontend; npx playwright test tests/evaluation-scenario.spec.js --headed
 ```
 
-Expected: `1 passed` in ~60 seconds. If it fails, do not present until fixed.
+Expected: `1 passed` in ~30 seconds. This test covers all 10 required presentation steps exactly as the grader will check them. If it fails, do not present until fixed.
 
 ---
 
