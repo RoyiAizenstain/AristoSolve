@@ -5,7 +5,8 @@
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
-    "dev": "nodemon src/server.js"
+    "dev": "nodemon src/server.js",
+    "seed": "node -e \"require('dotenv').config(); const {sequelize}=require('./models/index'); const u=require('./seeders/01-users'); const p=require('./seeders/02-problems'); const a=require('./seeders/03-admins'); const qi=sequelize.getQueryInterface(); sequelize.sync({force:false}).then(()=>u.up(qi)).then(()=>p.up(qi)).then(()=>a.up(qi)).then(()=>{console.log('Done. Database aristosolve created with all tables and seed data.');process.exit(0)}).catch(e=>{console.error(e.message);process.exit(1)});\""
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.105.0",

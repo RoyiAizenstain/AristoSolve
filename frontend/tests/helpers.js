@@ -1,6 +1,6 @@
 // Shared helpers used across all test files
 
-const BASE = 'http://localhost:5173';
+const BASE = process.env.BASE_URL || 'http://localhost:5173';
 
 const USERS = {
   admin:     { email: 'alice@example.com',  password: 'admin123',     role: 'admin' },

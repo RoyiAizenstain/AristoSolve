@@ -1,6 +1,6 @@
 const { test, expect } = require('@playwright/test');
 
-const BASE = 'http://localhost:5173';
+const BASE = process.env.BASE_URL || 'http://localhost:5173';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // PRESENTATION DEMO — follows exactly the 10 required steps

@@ -1,7 +1,7 @@
 const { test } = require('@playwright/test');
 const path = require('path');
 
-const BASE = 'http://localhost:5173';
+const BASE = process.env.BASE_URL || 'http://localhost:5173';
 const SHOTS = path.join(__dirname, '../../screenshots');
 
 test('04-websocket-two-clients', async ({ browser }) => {
