@@ -388,6 +388,7 @@ function AdminDashboard({ problems, users, loading, error }) {
                 <tr><th>Title</th><th>Difficulty</th><th>Topic</th><th>Type</th><th>Visibility</th><th></th></tr>
               </thead>
               <tbody>
+                {problems.length === 0 && <tr><td colSpan={6} className="table-empty">No problems yet.</td></tr>}
                 {problems.map(p => (
                   <tr key={p.id} className="table-row" style={{ cursor: 'pointer' }} onClick={() => navigate(`/problems/${p.id}`)}>
                     <td className="problem-title">{p.title}</td>
@@ -414,6 +415,7 @@ function AdminDashboard({ problems, users, loading, error }) {
                 <tr><th>Name</th><th>Email</th><th>Role</th><th>Level</th><th>Joined</th></tr>
               </thead>
               <tbody>
+                {users.length === 0 && <tr><td colSpan={5} className="table-empty">No users yet.</td></tr>}
                 {users.map(u => (
                   <tr key={u.userId} className="table-row">
                     <td className="problem-title">{u.firstName} {u.lastName}</td>

@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
 import Toast from '../components/Toast';
 import PageLoader from '../components/PageLoader';
-import { get, post, put, del } from '../services/api';
+import { get, post, put, del, getStoredUser } from '../services/api';
+import { logout } from '../services/auth';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const ROLES  = ['candidate', 'company', 'admin'];
@@ -107,6 +109,7 @@ function UserModal({ user, onSave, onClose, saving }) {
 
 /* ---- Page ---- */
 export default function UsersPage() {
+  const navigate = useNavigate();
   const [users,         setUsers]         = useState([]);
   const [loading,       setLoading]       = useState(true);
   const [modal,         setModal]         = useState(null);   // null | user object (empty = create)
@@ -146,6 +149,13 @@ export default function UsersPage() {
       await del(`/users/${userId}`);
       setUsers(us => us.filter(u => u.userId !== userId));
       setConfirmDelete(null);
+      // If admin deleted themselves, log out immediately
+      const me = getStoredUser();
+      if (me?.userId === userId) {
+        await logout();
+        navigate('/login');
+        return;
+      }
       setToast({ message: 'User deleted', type: 'success' });
     } catch (err) {
       setToast({ message: err.message, type: 'error' });
